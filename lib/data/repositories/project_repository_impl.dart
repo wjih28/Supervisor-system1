@@ -36,9 +36,18 @@ class ProjectRepositoryImpl implements ProjectRepository {
   Future<ResearchGroup?> getGroupDetails(int groupId) async {
     if (useMock) {
       final groups = await mockDataSource.getMockGroups(1);
-      return groups.firstWhere((g) => g.id == groupId);
+      try {
+        return groups.firstWhere((g) => g.id == groupId);
+      } catch (e) {
+        return null;
+      }
     } else {
-      return await remoteDataSource.getGroups(1).then((groups) => groups.firstWhere((g) => g.id == groupId));
+      final groups = await remoteDataSource.getGroups(1); // يمكن تحسينها لاحقاً
+      try {
+        return groups.firstWhere((g) => g.id == groupId);
+      } catch (e) {
+        return null;
+      }
     }
   }
 
@@ -54,8 +63,8 @@ class ProjectRepositoryImpl implements ProjectRepository {
   @override
   Future<List<ProjectFile>> getGroupFiles(int groupId) async {
     if (useMock) {
-      // تحويل ResearchFile إلى ProjectFile للمحاكاة
       final mockFiles = await mockDataSource.getMockFiles(groupId);
+      // تحويل البيانات الوهمية إلى النوع المطلوب ProjectFile
       return mockFiles.map((f) => ProjectFile(
         id: f.id,
         groupId: f.groupId,
@@ -80,7 +89,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
   @override
   Future<void> submitGrade(int groupId, double grade, String feedback) async {
     if (!useMock) {
-      // يمكن إضافة تنفيذ رصد الدرجة في SupabaseService لاحقاً
+      // يمكن إضافة تنفيذ رصد الدرجة في SupabaseService لاحقاً إذا لزم الأمر
     }
   }
 
@@ -89,6 +98,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
     if (useMock) {
       return await mockDataSource.getMockNotifications(supervisorId);
     } else {
+      // حالياً نستخدم البيانات الوهمية للإشعارات حتى يتم تجهيز جدولها في Supabase
       return await mockDataSource.getMockNotifications(supervisorId);
     }
   }
@@ -96,7 +106,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
   @override
   Future<void> markNotificationAsRead(int notificationId) async {
     if (!useMock) {
-      // تنفيذ التحديث في Supabase
+      // تنفيذ التحديث في Supabase عند توفر الجدول
     }
   }
 

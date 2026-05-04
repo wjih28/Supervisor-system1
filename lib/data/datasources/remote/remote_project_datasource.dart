@@ -15,20 +15,22 @@ class RemoteProjectDataSource {
   }
 
   Future<List<ProjectFile>> getFiles(int groupId) async {
-    return await SupabaseService.getFilesByGroup(groupId);
+    // استخدام الدالة الصحيحة الموجودة في SupabaseService
+    return await SupabaseService.getProjectFiles(groupId);
   }
 
   Future<void> updateProgress(int groupId, double progress) async {
-    // استخدام الحالة الافتراضية 'نشط' عند تحديث النسبة
+    // استخدام الدالة الصحيحة updateGroupStatus
     await SupabaseService.updateGroupStatus(groupId, 'نشط', progress);
   }
 
   Future<List<ReviewComment>> getMessages(int groupId) async {
+    // استخدام الدالة الصحيحة getCommentsByGroup
     return await SupabaseService.getCommentsByGroup(groupId);
   }
 
   Future<void> sendMessage(int groupId, int senderId, String message) async {
-    // إرسال رسالة كمراجعة في المرحلة الحالية
+    // استخدام الدالة الصحيحة addProjectFeedback
     await SupabaseService.addProjectFeedback(groupId, senderId, 'عام', message);
   }
 }
