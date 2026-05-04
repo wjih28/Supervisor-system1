@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../services/supabase_service.dart';
-import '../../models/models.dart';
+import '../../domain/models/models.dart';
+import '../../domain/repositories/project_repository.dart';
+import '../../data/repositories/project_repository_impl.dart';
+import '../../data/datasources/mock/mock_project_datasource.dart';
+import '../../data/datasources/remote/remote_project_datasource.dart';
 import 'project_details.dart';
 
 class SupervisorProjectsList extends StatefulWidget {
@@ -22,46 +25,31 @@ class SupervisorProjectsList extends StatefulWidget {
 class _SupervisorProjectsListState extends State<SupervisorProjectsList> {
   List<ResearchGroup> _projects = [];
   bool _isLoading = true;
+  
+  late final ProjectRepository _projectRepository;
 
   @override
   void initState() {
     super.initState();
+    
+    _projectRepository = ProjectRepositoryImpl(
+      mockDataSource: MockProjectDataSource(),
+      remoteDataSource: RemoteProjectDataSource(),
+      useMock: true, // غيّرها لـ false للتحويل لـ Supabase
+    );
+    
     _loadProjects();
   }
 
   Future<void> _loadProjects() async {
     setState(() => _isLoading = true);
-    if (widget.isGuest) {
-      _projects = [
-        ResearchGroup(
-          id: 1,
-          name: 'نظام إدارة المستشفيات الذكي',
-          progress: 0.75,
-          status: 'in_progress',
-          programId: 1,
-          supervisorId: 1,
-        ),
-        ResearchGroup(
-          id: 2,
-          name: 'تطبيق التجارة الإلكترونية المتقدم',
-          progress: 0.45,
-          status: 'in_progress',
-          programId: 1,
-          supervisorId: 1,
-        ),
-        ResearchGroup(
-          id: 3,
-          name: 'نظام تتبع الحافلات المدرسية',
-          progress: 0.90,
-          status: 'pending_approval',
-          programId: 1,
-          supervisorId: 1,
-        ),
-      ];
-    } else {
-      _projects = await SupabaseService.getGroupsBySupervisor(widget.supervisorId);
+    try {
+      _projects = await _projectRepository.getGroupsBySupervisor(widget.supervisorId);
+    } catch (e) {
+      debugPrint('خطأ في تحميل المشاريع: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
-    setState(() => _isLoading = false);
   }
 
   @override
@@ -86,11 +74,10 @@ class _SupervisorProjectsListState extends State<SupervisorProjectsList> {
                       child: ListTile(
                         title: Text(project.name),
                         subtitle: Text(
-                            'نسبة الإنجاز: ${((project.progress ?? 0) * 100).toInt()}%'),
+                            'نسبة الإنجاز: ${project.progress?.toInt() ?? 0}%'),
                         trailing: Chip(
-                          label: Text(_getStatusText(project.status)),
-                          backgroundColor:
-                              _getStatusColor(project.status).withOpacity(0.2),
+                          label: Text(project.currentStage ?? 'غير محدد'),
+                          backgroundColor: const Color(0xFF2D62ED).withOpacity(0.1),
                         ),
                         onTap: () {
                           Navigator.push(
@@ -108,35 +95,5 @@ class _SupervisorProjectsListState extends State<SupervisorProjectsList> {
                   },
                 ),
     );
-  }
-
-  String _getStatusText(String? status) {
-    switch (status) {
-      case 'in_progress':
-        return 'قيد التنفيذ';
-      case 'pending_approval':
-        return 'قيد المراجعة';
-      case 'approved':
-        return 'معتمد';
-      case 'completed':
-        return 'مكتمل';
-      default:
-        return status ?? 'غير محدد';
-    }
-  }
-
-  Color _getStatusColor(String? status) {
-    switch (status) {
-      case 'in_progress':
-        return Colors.orange;
-      case 'pending_approval':
-        return Colors.purple;
-      case 'approved':
-        return Colors.blue;
-      case 'completed':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
   }
 }

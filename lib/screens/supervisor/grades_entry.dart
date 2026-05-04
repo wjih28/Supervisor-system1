@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../services/supabase_service.dart';
-import '../../models/models.dart';
+import '../../domain/models/models.dart';
+import '../../domain/repositories/project_repository.dart';
+import '../../data/repositories/project_repository_impl.dart';
+import '../../data/datasources/mock/mock_project_datasource.dart';
+import '../../data/datasources/remote/remote_project_datasource.dart';
 
 class GradesEntry extends StatefulWidget {
   final int supervisorId;
@@ -18,6 +21,8 @@ class _GradesEntryState extends State<GradesEntry> {
   List<ResearchGroup> _projects = [];
   final Map<int, Map<String, double>> _grades = {};
   bool _isLoading = true;
+  
+  late final ProjectRepository _projectRepository;
 
   final List<Map<String, String>> _criteria = [
     {'key': 'proposal', 'name': 'المقترح', 'max': '10'},
@@ -30,23 +35,32 @@ class _GradesEntryState extends State<GradesEntry> {
   @override
   void initState() {
     super.initState();
+    
+    _projectRepository = ProjectRepositoryImpl(
+      mockDataSource: MockProjectDataSource(),
+      remoteDataSource: RemoteProjectDataSource(),
+      useMock: true,
+    );
+    
     _loadProjects();
   }
 
   Future<void> _loadProjects() async {
     setState(() => _isLoading = true);
-    _projects =
-        await SupabaseService.getGroupsBySupervisor(widget.supervisorId);
+    try {
+      _projects = await _projectRepository.getGroupsBySupervisor(widget.supervisorId);
 
-    // تهيئة الدرجات لكل مشروع
-    for (var project in _projects) {
-      _grades[project.id!] = {};
-      for (var criteria in _criteria) {
-        _grades[project.id!]![criteria['key']!] = 0;
+      for (var project in _projects) {
+        _grades[project.id!] = {};
+        for (var criteria in _criteria) {
+          _grades[project.id!]![criteria['key']!] = 0;
+        }
       }
+    } catch (e) {
+      debugPrint('خطأ في تحميل المشاريع: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
-
-    setState(() => _isLoading = false);
   }
 
   double _calculateTotal(int projectId) {
@@ -59,12 +73,14 @@ class _GradesEntryState extends State<GradesEntry> {
   }
 
   Future<void> _saveGrades(int projectId) async {
-    // هنا يمكن حفظ الدرجات في قاعدة البيانات
-    // حسب هيكل الجدول الموجود لديك
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم حفظ الدرجات بنجاح')),
-    );
+    final total = _calculateTotal(projectId);
+    await _projectRepository.submitGrade(projectId, total, "تم رصد الدرجات النهائية");
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حفظ الدرجات بنجاح')),
+      );
+    }
   }
 
   @override
@@ -91,10 +107,7 @@ class _GradesEntryState extends State<GradesEntry> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 16),
                       child: ExpansionTile(
-                        title: Text(
-                          project.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                        title: Text(project.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text('الإجمالي: $total / $maxTotal'),
                         children: [
                           Padding(
@@ -109,21 +122,14 @@ class _GradesEntryState extends State<GradesEntry> {
                                     )),
                                 const Divider(height: 32),
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     ElevatedButton(
                                       onPressed: () => _saveGrades(project.id!),
                                       child: const Text('حفظ الدرجات'),
                                     ),
-                                    Text(
-                                      'الإجمالي: $total / $maxTotal',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2D62ED),
-                                      ),
-                                    ),
+                                    Text('الإجمالي: $total / $maxTotal',
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D62ED))),
                                   ],
                                 ),
                               ],
@@ -142,14 +148,7 @@ class _GradesEntryState extends State<GradesEntry> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              name,
-              style: const TextStyle(fontSize: 14),
-              textAlign: TextAlign.right,
-            ),
-          ),
+          SizedBox(width: 100, child: Text(name, style: const TextStyle(fontSize: 14), textAlign: TextAlign.right)),
           Expanded(
             child: Slider(
               value: _grades[projectId]?[key] ?? 0,
@@ -164,27 +163,7 @@ class _GradesEntryState extends State<GradesEntry> {
               },
             ),
           ),
-          SizedBox(
-            width: 60,
-            child: TextFormField(
-              initialValue: '${_grades[projectId]?[key] ?? 0}',
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              onChanged: (value) {
-                final double? newValue = double.tryParse(value);
-                if (newValue != null && newValue >= 0 && newValue <= max) {
-                  setState(() {
-                    _grades[projectId]![key] = newValue;
-                  });
-                }
-              },
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-            ),
-          ),
+          SizedBox(width: 60, child: Text('${_grades[projectId]?[key]?.toInt() ?? 0}', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold))),
         ],
       ),
     );

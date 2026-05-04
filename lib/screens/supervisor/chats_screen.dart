@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/supabase_service.dart';
-import '../../models/models.dart';
-import '../../providers/supervisor_helpers.dart';
+import '../../domain/models/models.dart';
+import '../../domain/repositories/project_repository.dart';
+import '../../data/repositories/project_repository_impl.dart';
+import '../../data/datasources/mock/mock_project_datasource.dart';
+import '../../data/datasources/remote/remote_project_datasource.dart';
 
 class ChatsScreen extends StatefulWidget {
   final int supervisorId;
@@ -22,386 +23,160 @@ class ChatsScreen extends StatefulWidget {
 
 class _ChatsScreenState extends State<ChatsScreen> {
   bool _isLoading = true;
-  List<Map<String, dynamic>> _chats = [];
-  int? _selectedChatId;
-  String? _selectedGroupName;
-  List<Map<String, dynamic>> _messages = [];
+  List<ResearchGroup> _groups = [];
+  int? _selectedGroupId;
+  List<ReviewComment> _messages = [];
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  
+  late final ProjectRepository _projectRepository;
 
   @override
   void initState() {
     super.initState();
+    
+    _projectRepository = ProjectRepositoryImpl(
+      mockDataSource: MockProjectDataSource(),
+      remoteDataSource: RemoteProjectDataSource(),
+      useMock: true,
+    );
+    
     _loadChats();
   }
 
   Future<void> _loadChats() async {
     setState(() => _isLoading = true);
-    if (widget.isGuest) {
-      _chats = [
-        {
-          'chat_id': 1,
-          'groups': {'group_name': 'مجموعة نظام المستشفيات'},
-          'last_message': 'تم رفع التقرير النهائي يا دكتور',
-          'last_message_time': DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String(),
-        },
-        {
-          'chat_id': 2,
-          'groups': {'group_name': 'مجموعة التجارة الإلكترونية'},
-          'last_message': 'متى موعد المناقشة القادم؟',
-          'last_message_time': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
-        },
-      ];
-      if (_selectedChatId == null) {
-        _selectChat(_chats[0]['chat_id'], _chats[0]['groups']['group_name']);
-      }
-      setState(() => _isLoading = false);
-      return;
-    }
     try {
-      final response = await Supabase.instance.client
-          .from('chats')
-          .select('*, groups(group_name)')
-          .eq('id_sprvsr', widget.supervisorId)
-          .order('last_message_time', ascending: false);
-
-      setState(() {
-        _chats = List<Map<String, dynamic>>.from(response);
-        if (_chats.isNotEmpty && _selectedChatId == null) {
-          _selectChat(_chats[0]['chat_id'], _chats[0]['groups']['group_name']);
-        }
-      });
+      _groups = await _projectRepository.getGroupsBySupervisor(widget.supervisorId);
+      if (_groups.isNotEmpty) {
+        _selectChat(_groups[0].id!);
+      }
     } catch (e) {
-      debugPrint('Error loading chats: $e');
+      debugPrint('خطأ في تحميل المحادثات: $e');
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _selectChat(int chatId, String groupName) async {
+  Future<void> _selectChat(int groupId) async {
     setState(() {
-      _selectedChatId = chatId;
-      _selectedGroupName = groupName;
+      _selectedGroupId = groupId;
       _messages = [];
     });
-    _loadMessages(chatId);
+    _loadMessages(groupId);
   }
 
-  Future<void> _loadMessages(int chatId) async {
-    if (widget.isGuest) {
-      _messages = [
-        {
-          'message_text': 'السلام عليكم يا دكتور، هل يمكننا مراجعة الفصل الثالث؟',
-          'sender_role': 'student',
-          'created_at': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
-        },
-        {
-          'message_text': 'وعليكم السلام، نعم بالتأكيد. سأطلع عليه اليوم.',
-          'sender_role': 'supervisor',
-          'created_at': DateTime.now().subtract(const Duration(minutes: 30)).toIso8601String(),
-        },
-        {
-          'message_text': 'شكراً جزيلاً يا دكتور.',
-          'sender_role': 'student',
-          'created_at': DateTime.now().subtract(const Duration(minutes: 10)).toIso8601String(),
-        },
-      ];
+  Future<void> _loadMessages(int groupId) async {
+    try {
+      _messages = await _projectRepository.getChatMessages(groupId);
       setState(() {});
       _scrollToBottom();
-      return;
-    }
-    try {
-      final response = await Supabase.instance.client
-          .from('messages')
-          .select()
-          .eq('id_chat', chatId)
-          .order('created_at', ascending: true);
-
-      setState(() {
-        _messages = List<Map<String, dynamic>>.from(response);
-      });
-      _scrollToBottom();
     } catch (e) {
-      debugPrint('Error loading messages: $e');
+      debugPrint('خطأ في تحميل الرسائل: $e');
     }
   }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty || _selectedChatId == null) return;
+    if (_messageController.text.trim().isEmpty || _selectedGroupId == null) return;
 
     final text = _messageController.text.trim();
     _messageController.clear();
 
     try {
-      await Supabase.instance.client.from('messages').insert({
-        'id_chat': _selectedChatId,
-        'sender_id': widget.supervisorId,
-        'sender_role': 'supervisor',
-        'message_text': text,
-      });
-
-      await Supabase.instance.client.from('chats').update({
-        'last_message': text,
-        'last_message_time': DateTime.now().toIso8601String(),
-      }).eq('chat_id', _selectedChatId!);
-
-      _loadMessages(_selectedChatId!);
+      await _projectRepository.sendMessage(_selectedGroupId!, widget.supervisorId, text);
+      _loadMessages(_selectedGroupId!);
     } catch (e) {
-      debugPrint('Error sending message: $e');
+      debugPrint('خطأ في إرسال الرسالة: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 800;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'نظام إدارة ومتابعة أبحاث التخرج',
-          style: TextStyle(color: Color(0xFF2D62ED), fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF2D62ED)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.grey),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-          const CircleAvatar(
-            radius: 18,
-            backgroundColor: Color(0xFFE0E0E0),
-            child: Icon(Icons.person, color: Colors.white),
-          ),
-          const SizedBox(width: 16),
-        ],
+        title: const Text('المحادثات'),
+        backgroundColor: const Color(0xFF2D62ED),
+        foregroundColor: Colors.white,
       ),
       body: Row(
         children: [
-          if (!isMobile) _buildChatList(width: 300),
-          Expanded(
-            child: _selectedChatId == null
-                ? const Center(child: Text('اختر محادثة للبدء'))
-                : _buildChatWindow(),
-          ),
+          Expanded(flex: 1, child: _buildChatList()),
+          const VerticalDivider(width: 1),
+          Expanded(flex: 2, child: _buildChatWindow()),
         ],
       ),
     );
   }
 
-  Widget _buildChatList({double? width}) {
-    return Container(
-      width: width,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(right: BorderSide(color: Color(0xFFE2E8F0))),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'بحث عن مجموعة...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _chats.length,
-                    itemBuilder: (context, index) {
-                      final chat = _chats[index];
-                      final isSelected = _selectedChatId == chat['chat_id'];
-                      return ListTile(
-                        onTap: () => _selectChat(chat['chat_id'], chat['groups']['group_name']),
-                        selected: isSelected,
-                        selectedTileColor: const Color(0xFFF0F4FF),
-                        leading: CircleAvatar(
-                          backgroundColor: isSelected ? const Color(0xFF2D62ED) : const Color(0xFFE2E8F0),
-                          child: Text(
-                            chat['groups']['group_name'][0],
-                            style: TextStyle(color: isSelected ? Colors.white : const Color(0xFF64748B)),
-                          ),
-                        ),
-                        title: Text(
-                          chat['groups']['group_name'],
-                          style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: const Color(0xFF1E293B),
-                          ),
-                        ),
-                        subtitle: Text(
-                          chat['last_message'] ?? 'لا توجد رسائل',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        trailing: Text(
-                          SupervisorHelpers.getTimeDifference(
-                            DateTime.tryParse(chat['last_message_time'] ?? ''),
-                          ),
-                          style: const TextStyle(fontSize: 10, color: Colors.grey),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+  Widget _buildChatList() {
+    return ListView.builder(
+      itemCount: _groups.length,
+      itemBuilder: (context, index) {
+        final group = _groups[index];
+        final isSelected = _selectedGroupId == group.id;
+        return ListTile(
+          onTap: () => _selectChat(group.id!),
+          selected: isSelected,
+          selectedTileColor: Colors.blue.withOpacity(0.1),
+          title: Text(group.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          subtitle: const Text('آخر رسالة...', style: TextStyle(fontSize: 12)),
+        );
+      },
     );
   }
 
   Widget _buildChatWindow() {
+    if (_selectedGroupId == null) {
+      return const Center(child: Text('اختر مجموعة للبدء'));
+    }
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _selectedGroupName ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const Text('متصل الآن', style: TextStyle(color: Colors.green, fontSize: 12)),
-                ],
-              ),
-              const SizedBox(width: 12),
-              const CircleAvatar(
-                backgroundColor: Color(0xFFF0F4FF),
-                child: Icon(Icons.group, color: Color(0xFF2D62ED)),
-              ),
-            ],
-          ),
-        ),
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             itemCount: _messages.length,
             itemBuilder: (context, index) {
               final msg = _messages[index];
-              final isMe = msg['sender_role'] == 'supervisor';
-              return _buildMessageBubble(msg['message_text'], isMe, msg['created_at']);
+              final isMe = msg.supervisorId != null;
+              return Align(
+                alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isMe ? const Color(0xFF2D62ED) : Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(msg.comment, style: TextStyle(color: isMe ? Colors.white : Colors.black)),
+                ),
+              );
             },
           ),
         ),
-        _buildMessageInput(),
-      ],
-    );
-  }
-
-  Widget _buildMessageBubble(String text, bool isMe, String time) {
-    final date = DateTime.tryParse(time);
-    final timeStr = date != null ? '${date.hour}:${date.minute.toString().padLeft(2, '0')}' : '';
-
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
-        decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF2D62ED) : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: isMe ? const Radius.circular(16) : Radius.zero,
-            bottomRight: isMe ? Radius.zero : const Radius.circular(16),
-          ),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Text(
-              text,
-              style: TextStyle(color: isMe ? Colors.white : const Color(0xFF1E293B), fontSize: 14),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              timeStr,
-              style: TextStyle(color: isMe ? Colors.white70 : Colors.grey, fontSize: 10),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessageInput() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.attach_file, color: Colors.grey),
-            onPressed: () {},
-          ),
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'اكتب رسالتك هنا...',
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  decoration: const InputDecoration(hintText: 'اكتب رسالة...', border: OutlineInputBorder()),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
-              onSubmitted: (_) => _sendMessage(),
-            ),
+              IconButton(icon: const Icon(Icons.send, color: Color(0xFF2D62ED)), onPressed: _sendMessage),
+            ],
           ),
-          const SizedBox(width: 12),
-          CircleAvatar(
-            backgroundColor: const Color(0xFF2D62ED),
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white, size: 20),
-              onPressed: _sendMessage,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
