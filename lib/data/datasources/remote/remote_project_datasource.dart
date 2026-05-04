@@ -11,22 +11,24 @@ class RemoteProjectDataSource {
   }
 
   Future<List<Student>> getStudents(int groupId) async {
-    return await SupabaseService.getStudentsByGroup(groupId);
+    return await SupabaseService.getGroupStudents(groupId);
   }
 
-  Future<List<ResearchFile>> getFiles(int groupId) async {
+  Future<List<ProjectFile>> getFiles(int groupId) async {
     return await SupabaseService.getFilesByGroup(groupId);
   }
 
   Future<void> updateProgress(int groupId, double progress) async {
-    await SupabaseService.updateGroupProgress(groupId, progress);
+    // استخدام الحالة الافتراضية 'نشط' عند تحديث النسبة
+    await SupabaseService.updateGroupStatus(groupId, 'نشط', progress);
   }
 
   Future<List<ReviewComment>> getMessages(int groupId) async {
-    return await SupabaseService.getMessagesByGroup(groupId);
+    return await SupabaseService.getCommentsByGroup(groupId);
   }
 
   Future<void> sendMessage(int groupId, int senderId, String message) async {
-    await SupabaseService.sendMessage(groupId, senderId, message);
+    // إرسال رسالة كمراجعة في المرحلة الحالية
+    await SupabaseService.addProjectFeedback(groupId, senderId, 'عام', message);
   }
 }

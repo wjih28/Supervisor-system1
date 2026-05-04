@@ -38,8 +38,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
       final groups = await mockDataSource.getMockGroups(1);
       return groups.firstWhere((g) => g.id == groupId);
     } else {
-      // تنفيذ جلب تفاصيل المجموعة من Supabase
-      return null;
+      return await remoteDataSource.getGroups(1).then((groups) => groups.firstWhere((g) => g.id == groupId));
     }
   }
 
@@ -48,32 +47,40 @@ class ProjectRepositoryImpl implements ProjectRepository {
     if (useMock) {
       return await mockDataSource.getMockStudents(groupId);
     } else {
-      // تنفيذ جلب الطلاب من Supabase
-      return [];
+      return await remoteDataSource.getStudents(groupId);
     }
   }
 
   @override
-  Future<List<ResearchFile>> getGroupFiles(int groupId) async {
+  Future<List<ProjectFile>> getGroupFiles(int groupId) async {
     if (useMock) {
-      return await mockDataSource.getMockFiles(groupId);
+      // تحويل ResearchFile إلى ProjectFile للمحاكاة
+      final mockFiles = await mockDataSource.getMockFiles(groupId);
+      return mockFiles.map((f) => ProjectFile(
+        id: f.id,
+        groupId: f.groupId,
+        fileName: f.fileName,
+        fileType: f.fileType,
+        uploadedBy: f.uploadedBy,
+        uploadedAt: f.uploadedAt,
+        fileStage: f.stage,
+      )).toList();
     } else {
-      // تنفيذ جلب الملفات من Supabase
-      return [];
+      return await remoteDataSource.getFiles(groupId);
     }
   }
 
   @override
   Future<void> updateGroupProgress(int groupId, double progress) async {
     if (!useMock) {
-      // تنفيذ التحديث في Supabase
+      await remoteDataSource.updateProgress(groupId, progress);
     }
   }
 
   @override
   Future<void> submitGrade(int groupId, double grade, String feedback) async {
     if (!useMock) {
-      // تنفيذ رصد الدرجة في Supabase
+      // يمكن إضافة تنفيذ رصد الدرجة في SupabaseService لاحقاً
     }
   }
 
@@ -98,15 +105,14 @@ class ProjectRepositoryImpl implements ProjectRepository {
     if (useMock) {
       return await mockDataSource.getMockMessages(groupId);
     } else {
-      // تنفيذ جلب الرسائل من Supabase
-      return [];
+      return await remoteDataSource.getMessages(groupId);
     }
   }
 
   @override
   Future<void> sendMessage(int groupId, int senderId, String message) async {
     if (!useMock) {
-      // تنفيذ إرسال الرسالة في Supabase
+      await remoteDataSource.sendMessage(groupId, senderId, message);
     }
   }
 }

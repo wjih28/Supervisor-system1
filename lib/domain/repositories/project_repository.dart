@@ -10,7 +10,7 @@ abstract class ProjectRepository {
   Future<List<Student>> getStudentsByGroup(int groupId);
   
   // Files & Grades
-  Future<List<ResearchFile>> getGroupFiles(int groupId);
+  Future<List<ProjectFile>> getGroupFiles(int groupId);
   Future<void> updateGroupProgress(int groupId, double progress);
   Future<void> submitGrade(int groupId, double grade, String feedback);
   
