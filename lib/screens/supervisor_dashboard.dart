@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/models/models.dart';
 import '../domain/repositories/project_repository.dart';
 import '../data/repositories/project_repository_impl.dart';
-import '../data/datasources/mock/mock_project_datasource.dart';
 import '../data/datasources/remote/remote_project_datasource.dart';
 import 'supervisor/projects_list.dart';
 import 'supervisor/grades_entry.dart';
@@ -36,11 +35,9 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   void initState() {
     super.initState();
     
-    // تهيئة الـ Repository مع إمكانية التبديل بين Mock و Real
+    // تهيئة الـ Repository للاعتماد الكلي على Supabase
     _projectRepository = ProjectRepositoryImpl(
-      mockDataSource: MockProjectDataSource(),
       remoteDataSource: RemoteProjectDataSource(),
-      useMock: true, // اجعلها false للتحويل إلى Supabase
     );
     
     _loadData();
@@ -196,7 +193,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
           const SizedBox(height: 12),
           _buildMobileInfoCard(title: 'عدد الأبحاث', value: _totalProjects.toString(), color: const Color(0xFF2D62ED)),
           const SizedBox(height: 24),
-          const Text('المجموعات الحالية (Mock Data)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('المجموعات الحالية', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           ..._groups.map((group) => Card(
             margin: const EdgeInsets.only(bottom: 12),

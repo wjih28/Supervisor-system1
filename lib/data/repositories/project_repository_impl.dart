@@ -1,128 +1,72 @@
 import '../../domain/models/models.dart';
 import '../../domain/repositories/project_repository.dart';
-import '../datasources/mock/mock_project_datasource.dart';
 import '../datasources/remote/remote_project_datasource.dart';
 
 class ProjectRepositoryImpl implements ProjectRepository {
-  final MockProjectDataSource mockDataSource;
   final RemoteProjectDataSource remoteDataSource;
-  final bool useMock;
 
   ProjectRepositoryImpl({
-    required this.mockDataSource,
     required this.remoteDataSource,
-    this.useMock = true,
   });
 
   @override
   Future<List<ResearchGroup>> getGroupsBySupervisor(int supervisorId) async {
-    if (useMock) {
-      return await mockDataSource.getMockGroups(supervisorId);
-    } else {
-      return await remoteDataSource.getGroups(supervisorId);
-    }
+    return await remoteDataSource.getGroups(supervisorId);
   }
 
   @override
   Future<Supervisor?> getSupervisorById(int supervisorId) async {
-    if (useMock) {
-      return await mockDataSource.getMockSupervisor(supervisorId);
-    } else {
-      return await remoteDataSource.getSupervisor(supervisorId);
-    }
+    return await remoteDataSource.getSupervisor(supervisorId);
   }
 
   @override
   Future<ResearchGroup?> getGroupDetails(int groupId) async {
-    if (useMock) {
-      final groups = await mockDataSource.getMockGroups(1);
-      try {
-        return groups.firstWhere((g) => g.id == groupId);
-      } catch (e) {
-        return null;
-      }
-    } else {
-      final groups = await remoteDataSource.getGroups(1); // يمكن تحسينها لاحقاً
-      try {
-        return groups.firstWhere((g) => g.id == groupId);
-      } catch (e) {
-        return null;
-      }
+    final groups = await remoteDataSource.getGroups(1); // يمكن تحسينها لاحقاً لجلب مجموعة واحدة
+    try {
+      return groups.firstWhere((g) => g.id == groupId);
+    } catch (e) {
+      return null;
     }
   }
 
   @override
   Future<List<Student>> getStudentsByGroup(int groupId) async {
-    if (useMock) {
-      return await mockDataSource.getMockStudents(groupId);
-    } else {
-      return await remoteDataSource.getStudents(groupId);
-    }
+    return await remoteDataSource.getStudents(groupId);
   }
 
   @override
-  Future<List<ProjectFile>> getGroupFiles(int groupId) async {
-    if (useMock) {
-      final mockFiles = await mockDataSource.getMockFiles(groupId);
-      // تحويل البيانات الوهمية إلى النوع المطلوب ProjectFile
-      return mockFiles.map((f) => ProjectFile(
-        id: f.id,
-        groupId: f.groupId,
-        fileName: f.fileName,
-        fileType: f.fileType,
-        uploadedBy: f.uploadedBy,
-        uploadedAt: f.uploadedAt,
-        fileStage: f.stage,
-      )).toList();
-    } else {
-      return await remoteDataSource.getFiles(groupId);
-    }
+  Future<List<ResearchFile>> getGroupFiles(int groupId) async {
+    return await remoteDataSource.getFiles(groupId);
   }
 
   @override
   Future<void> updateGroupProgress(int groupId, double progress) async {
-    if (!useMock) {
-      await remoteDataSource.updateProgress(groupId, progress);
-    }
+    await remoteDataSource.updateProgress(groupId, progress);
   }
 
   @override
   Future<void> submitGrade(int groupId, double grade, String feedback) async {
-    if (!useMock) {
-      // يمكن إضافة تنفيذ رصد الدرجة في SupabaseService لاحقاً إذا لزم الأمر
-    }
+    // يمكن إضافة تنفيذ رصد الدرجة في SupabaseService لاحقاً
   }
 
   @override
   Future<List<Notification>> getNotifications(int supervisorId) async {
-    if (useMock) {
-      return await mockDataSource.getMockNotifications(supervisorId);
-    } else {
-      // حالياً نستخدم البيانات الوهمية للإشعارات حتى يتم تجهيز جدولها في Supabase
-      return await mockDataSource.getMockNotifications(supervisorId);
-    }
+    // حالياً تعيد قائمة فارغة حتى يتم تجهيز جدول الإشعارات في Supabase
+    return [];
   }
 
   @override
   Future<void> markNotificationAsRead(int notificationId) async {
-    if (!useMock) {
-      // تنفيذ التحديث في Supabase عند توفر الجدول
-    }
+    // تنفيذ التحديث في Supabase عند توفر الجدول
   }
 
   @override
   Future<List<ReviewComment>> getChatMessages(int groupId) async {
-    if (useMock) {
-      return await mockDataSource.getMockMessages(groupId);
-    } else {
-      return await remoteDataSource.getMessages(groupId);
-    }
+    return await remoteDataSource.getMessages(groupId);
   }
 
   @override
   Future<void> sendMessage(int groupId, int senderId, String message) async {
-    if (!useMock) {
-      await remoteDataSource.sendMessage(groupId, senderId, message);
-    }
+    await remoteDataSource.sendMessage(groupId, senderId, message);
   }
 }
