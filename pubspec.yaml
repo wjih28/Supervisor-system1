@@ -11,6 +11,7 @@ dependencies:
   supabase_flutter: ^2.0.0
   flutter_dotenv: ^5.1.0
   url_launcher: ^6.1.10
+  google_fonts: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -22,3 +23,10 @@ flutter:
 
   assets:
     - .env
+
+  fonts:
+    - family: Tajawal
+      fonts:
+        - asset: assets/fonts/Tajawal-Regular.ttf
+        - asset: assets/fonts/Tajawal-Bold.ttf
+          weight: 700
