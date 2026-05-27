@@ -1,12 +1,23 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/models.dart';
+import '../constants/mock_data.dart';
 
 class SupabaseService {
-  static final client = Supabase.instance.client;
+  // static final client = Supabase.instance.client;
 
-  // تسجيل دخول المشرف
   static Future<Map<String, dynamic>?> loginSupervisor(
       String username, String password) async {
+    // محاكاة تسجيل الدخول
+    final supervisor = MockData.supervisors.firstWhere(
+      (s) => s.username == username && s.password == password,
+      orElse: () => throw Exception('User not found'),
+    );
+
+    return {
+      'user': supervisor,
+      'role': 'supervisor',
+    };
+    /*
     try {
       final response = await client
           .from('supervisor')
@@ -23,14 +34,16 @@ class SupabaseService {
       }
       return null;
     } catch (e) {
-      print('Error logging in supervisor: $e');
+      debugPrint('Error logging in supervisor: $e');
       return null;
     }
+    */
   }
 
-  // جلب المجموعات التابعة للمشرف
   static Future<List<ResearchGroup>> getGroupsBySupervisor(
       int supervisorId) async {
+    return MockData.groups.where((g) => g.supervisorId == supervisorId).toList();
+    /*
     try {
       final response =
           await client.from('groups').select().eq('id_sprvsr', supervisorId);
@@ -39,13 +52,15 @@ class SupabaseService {
           .map((json) => ResearchGroup.fromJson(json))
           .toList();
     } catch (e) {
-      print('Error fetching groups: $e');
+      debugPrint('Error fetching groups: $e');
       return [];
     }
+    */
   }
 
-  // جلب بيانات المشروع بواسطة المعرف
   static Future<ResearchGroup?> getProjectById(int id) async {
+    return MockData.groups.firstWhere((g) => g.id == id, orElse: () => MockData.groups.first);
+    /*
     try {
       final response =
           await client.from('groups').select().eq('group_id', id).maybeSingle();
@@ -55,26 +70,30 @@ class SupabaseService {
       }
       return null;
     } catch (e) {
-      print('Error fetching project: $e');
+      debugPrint('Error fetching project: $e');
       return null;
     }
+    */
   }
 
-  // جلب طلاب مجموعة معينة
   static Future<List<Student>> getGroupStudents(int groupId) async {
+    return MockData.students.where((s) => s.groupId == groupId).toList();
+    /*
     try {
       final response =
           await client.from('student').select().eq('id_group', groupId);
 
       return (response as List).map((json) => Student.fromJson(json)).toList();
     } catch (e) {
-      print('Error fetching group students: $e');
+      debugPrint('Error fetching group students: $e');
       return [];
     }
+    */
   }
 
-  // جلب تعليقات وملاحظات مشروع معين
   static Future<List<ProjectFeedback>> getProjectFeedback(int projectId) async {
+    return []; // لم نقم بإنشاء بيانات وهمية للـ Feedback بعد
+    /*
     try {
       final response = await client
           .from('review_comments')
@@ -85,14 +104,20 @@ class SupabaseService {
           .map((json) => ProjectFeedback.fromJson(json))
           .toList();
     } catch (e) {
-      print('Error fetching project feedback: $e');
+      debugPrint('Error fetching project feedback: $e');
       return [];
     }
+    */
   }
 
-  // جلب ملفات مشروع معين حسب المرحلة
   static Future<List<ProjectFile>> getProjectFiles(int projectId,
       {String? stage}) async {
+    var files = MockData.files.where((f) => f.groupId == projectId).toList();
+    if (stage != null) {
+      files = files.where((f) => f.stage == stage).toList();
+    }
+    return files;
+    /*
     try {
       var query =
           client.from('research_files').select().eq('id_group', projectId);
@@ -104,13 +129,15 @@ class SupabaseService {
           .map((json) => ProjectFile.fromJson(json))
           .toList();
     } catch (e) {
-      print('Error fetching project files: $e');
+      debugPrint('Error fetching project files: $e');
       return [];
     }
+    */
   }
 
-  // جلب بيانات المشرف بواسطة المعرف
   static Future<Supervisor?> getSupervisorById(int id) async {
+    return MockData.supervisors.firstWhere((s) => s.id == id, orElse: () => MockData.supervisors.first);
+    /*
     try {
       final response = await client
           .from('supervisor')
@@ -123,13 +150,15 @@ class SupabaseService {
       }
       return null;
     } catch (e) {
-      print('Error fetching supervisor: $e');
+      debugPrint('Error fetching supervisor: $e');
       return null;
     }
+    */
   }
 
-  // جلب بيانات البرنامج بواسطة المعرف
   static Future<Program?> getProgramById(int id) async {
+    return Program(id: 1, name: 'علوم الحاسب');
+    /*
     try {
       final response = await client
           .from('program')
@@ -142,13 +171,15 @@ class SupabaseService {
       }
       return null;
     } catch (e) {
-      print('Error fetching program: $e');
+      debugPrint('Error fetching program: $e');
       return null;
     }
+    */
   }
 
-  // جلب بيانات القسم بواسطة المعرف
   static Future<Department?> getDepartmentById(int id) async {
+    return Department(id: 1, name: 'تقنية المعلومات');
+    /*
     try {
       final response = await client
           .from('department')
@@ -161,56 +192,102 @@ class SupabaseService {
       }
       return null;
     } catch (e) {
-      print('Error fetching department: $e');
+      debugPrint('Error fetching department: $e');
       return null;
     }
+    */
   }
 
-  // تحديث حالة المجموعة ونسبة الإنجاز
   static Future<bool> updateGroupStatus(
       int groupId, String status, double progress) async {
     try {
+      final index = MockData.groups.indexWhere((g) => g.id == groupId);
+      if (index != -1) {
+        MockData.groups[index].status = status;
+        MockData.groups[index].progress = progress;
+        return true;
+      }
+      return false;
+      /*
       await client.from('groups').update({
         'group_status': status,
         'group_progress': progress,
       }).eq('group_id', groupId);
       return true;
+      */
     } catch (e) {
-      print('Error updating group status: $e');
+      debugPrint('Error updating group status: $e');
       return false;
     }
   }
 
-  // تحديث مرحلة المشروع
   static Future<bool> updateProjectStage(int projectId, String stage) async {
     try {
+      final index = MockData.groups.indexWhere((g) => g.id == projectId);
+      if (index != -1) {
+        MockData.groups[index] = MockData.groups[index].copyWith(currentStage: stage);
+        return true;
+      }
+      return false;
+      /*
       await client
           .from('groups')
           .update({'current_stage': stage}).eq('group_id', projectId);
       return true;
+      */
     } catch (e) {
-      print('Error updating project stage: $e');
+      debugPrint('Error updating project stage: $e');
       return false;
     }
   }
 
-  // إضافة ملاحظة مشرف على ملف
   static Future<bool> addSupervisorNote(int fileId, String note) async {
     try {
+      final index = MockData.files.indexWhere((f) => f.id == fileId);
+      if (index != -1) {
+        final oldFile = MockData.files[index];
+        MockData.files[index] = ProjectFile(
+          id: oldFile.id,
+          groupId: oldFile.groupId,
+          fileName: oldFile.fileName,
+          fileUrl: oldFile.fileUrl,
+          fileType: oldFile.fileType,
+          fileSize: oldFile.fileSize,
+          uploadedBy: oldFile.uploadedBy,
+          uploadedAt: oldFile.uploadedAt,
+          supervisorNotes: note,
+          description: oldFile.description,
+          stage: oldFile.stage,
+        );
+        return true;
+      }
+      return false;
+      /*
       await client
           .from('research_files')
           .update({'supervisor_notes': note}).eq('file_id', fileId);
       return true;
+      */
     } catch (e) {
-      print('Error adding supervisor note: $e');
+      debugPrint('Error adding supervisor note: $e');
       return false;
     }
   }
 
-  // إضافة ملاحظة/تعليق مراجعة على المشروع
   static Future<bool> addProjectFeedback(
       int projectId, int supervisorId, String stage, String comment) async {
     try {
+      MockData.comments.add(ReviewComment(
+        id: MockData.comments.length + 1,
+        groupId: projectId,
+        supervisorId: supervisorId,
+        comment: comment,
+        stage: stage,
+        isResolved: false,
+        createdAt: DateTime.now(),
+      ));
+      return true;
+      /*
       await client.from('review_comments').insert({
         'id_group': projectId,
         'id_sprvsr': supervisorId,
@@ -219,145 +296,104 @@ class SupabaseService {
         'is_resolved': false,
       });
       return true;
+      */
     } catch (e) {
-      print('Error adding project feedback: $e');
+      debugPrint('Error adding project feedback: $e');
       return false;
     }
   }
 
   // حل ملاحظة/تعليق مراجعة
   static Future<bool> resolveFeedback(int feedbackId) async {
-    try {
-      await client
-          .from('review_comments')
-          .update({'is_resolved': true}).eq('comment_id', feedbackId);
-      return true;
-    } catch (e) {
-      print('Error resolving feedback: $e');
-      return false;
-    }
+    return true;
   }
 
   // إضافة تعليق مراجعة (كائن)
   static Future<bool> addReviewComment(ReviewComment comment) async {
-    try {
-      await client.from('review_comments').insert(comment.toJson());
-      return true;
-    } catch (e) {
-      print('Error adding review comment: $e');
-      return false;
-    }
+    MockData.comments.add(comment);
+    return true;
   }
 
   // تحديث تعليق مراجعة (كائن)
   static Future<bool> updateReviewComment(ReviewComment comment) async {
-    try {
-      if (comment.id == null) return false;
-      await client
-          .from('review_comments')
-          .update(comment.toJson())
-          .eq('comment_id', comment.id!);
+    final index = MockData.comments.indexWhere((c) => c.id == comment.id);
+    if (index != -1) {
+      MockData.comments[index] = comment;
       return true;
-    } catch (e) {
-      print('Error updating review comment: $e');
-      return false;
     }
+    return false;
   }
 
   // إرسال إشعار
-  static Future<bool> sendNotification(Notification notification) async {
-    try {
-      await client.from('notifications').insert(notification.toJson());
-      return true;
-    } catch (e) {
-      print('Error sending notification: $e');
-      return false;
-    }
+  static Future<bool> sendNotification(AppNotification notification) async {
+    return true;
   }
 
-  // جلب إحصائيات المشرف
   static Future<Map<String, dynamic>?> getSupervisorStatistics(
       int supervisorId) async {
-    try {
-      final groups = await getGroupsBySupervisor(supervisorId);
-      int total = groups.length;
-      int completed = groups.where((g) => g.status == 'completed').length;
-      int inProgress = groups.where((g) => g.status == 'in_progress').length;
-      int pending = groups.where((g) => g.status == 'pending_approval').length;
+    final groups = MockData.groups.where((g) => g.supervisorId == supervisorId).toList();
+    int total = groups.length;
+    int completed = groups.where((g) => g.status == 'completed').length;
+    int inProgress = groups.where((g) => g.status == 'in_progress').length;
+    int pending = groups.where((g) => g.status == 'pending').length;
 
-      return {
-        'totalProjects': total,
-        'completedProjects': completed,
-        'inProgressProjects': inProgress,
-        'pendingProjects': pending,
-        'pendingReviews': pending,
-      };
-    } catch (e) {
-      print('Error fetching supervisor statistics: $e');
-      return null;
-    }
+    return {
+      'totalProjects': total,
+      'completedProjects': completed,
+      'inProgressProjects': inProgress,
+      'pendingProjects': pending,
+      'pendingReviews': pending,
+    };
   }
 
-  // جلب التعليقات حسب المجموعة
   static Future<List<ReviewComment>> getCommentsByGroup(int groupId) async {
-    try {
-      final response =
-          await client.from('review_comments').select().eq('id_group', groupId);
-      return (response as List)
-          .map((json) => ReviewComment.fromJson(json))
-          .toList();
-    } catch (e) {
-      print('Error fetching comments by group: $e');
-      return [];
-    }
+    return MockData.comments.where((c) => c.groupId == groupId).toList();
   }
 
-  // جلب الملفات حسب المجموعة
   static Future<List<ProjectFile>> getFilesByGroup(int groupId) async {
-    try {
-      final response =
-          await client.from('research_files').select().eq('id_group', groupId);
-      return (response as List)
-          .map((json) => ProjectFile.fromJson(json))
-          .toList();
-    } catch (e) {
-      print('Error fetching files by group: $e');
-      return [];
-    }
+    return MockData.files.where((f) => f.groupId == groupId).toList();
   }
 
-  // جلب مراحل المشروع
   static Future<List<ProjectStage>> getProjectStages(int groupId) async {
     try {
-      // يمكن جلبها من جدول مراحل مخصص أو استنتاجها من البيانات
       return [
-        ProjectStage(
-            id: 1, name: 'المقترح', status: 'completed', progress: 1.0),
-        ProjectStage(
-            id: 2, name: 'خطة البحث', status: 'in_progress', progress: 0.7),
-        ProjectStage(
-            id: 3, name: 'البحث النهائي', status: 'pending', progress: 0.0),
+        ProjectStage(id: 1, name: 'المرحلة الأولى: اختيار عنوان البحث', status: 'completed', progress: 1.0, startDate: DateTime(2025, 9, 1), endDate: DateTime(2025, 9, 15)),
+        ProjectStage(id: 2, name: 'المرحلة الثانية: إنجاز الخطة', status: 'completed', progress: 1.0, startDate: DateTime(2025, 9, 16), endDate: DateTime(2025, 10, 1)),
+        ProjectStage(id: 3, name: 'المرحلة الثالثة: مناقشة الخطة', status: 'in_progress', progress: 0.6, startDate: DateTime(2025, 10, 2), endDate: DateTime(2025, 10, 15)),
+        ProjectStage(id: 4, name: 'المرحلة الرابعة: إنجاز الدراسات الميدانية', status: 'in_progress', progress: 0.0, startDate: DateTime(2025, 10, 16), endDate: DateTime(2025, 11, 30)),
+        ProjectStage(id: 5, name: 'المرحلة الخامسة: إنجاز مشروع البحث', status: 'pending', progress: 0.0, startDate: DateTime(2025, 12, 1), endDate: DateTime(2025, 12, 20)),
+        ProjectStage(id: 6, name: 'المرحلة السادسة: مناقشة البحث', status: 'pending', progress: 0.0, startDate: DateTime(2025, 12, 21), endDate: DateTime(2025, 12, 28)),
+        ProjectStage(id: 7, name: 'المرحلة السابعة: تسليم البحث', status: 'pending', progress: 0.0, startDate: DateTime(2025, 12, 29), endDate: DateTime(2026, 1, 10)),
       ];
     } catch (e) {
-      print('Error fetching project stages: $e');
+      debugPrint('Error fetching project stages: $e');
       return [];
     }
   }
 
-  // إضافة تعليق
   static Future<bool> addComment(ReviewComment comment) async {
+    MockData.comments.add(comment);
+    return true;
+    /*
     try {
       await client.from('review_comments').insert(comment.toJson());
       return true;
     } catch (e) {
-      print('Error adding comment: $e');
+      debugPrint('Error adding comment: $e');
       return false;
     }
+    */
   }
 
-  // تحديث تعليق
   static Future<bool> updateComment(
       int commentId, ReviewComment comment) async {
+    final index = MockData.comments.indexWhere((c) => c.id == commentId);
+    if (index != -1) {
+      MockData.comments[index] = comment;
+      return true;
+    }
+    return false;
+    /*
     try {
       await client
           .from('review_comments')
@@ -365,38 +401,47 @@ class SupabaseService {
           .eq('comment_id', commentId);
       return true;
     } catch (e) {
-      print('Error updating comment: $e');
+      debugPrint('Error updating comment: $e');
       return false;
     }
+    */
   }
 
-  // حذف تعليق
   static Future<bool> deleteComment(int commentId) async {
+    MockData.comments.removeWhere((c) => c.id == commentId);
+    return true;
+    /*
     try {
       await client.from('review_comments').delete().eq('comment_id', commentId);
       return true;
     } catch (e) {
-      print('Error deleting comment: $e');
+      debugPrint('Error deleting comment: $e');
       return false;
     }
+    */
   }
 
   // تحديث حالة المرحلة
   static Future<bool> updateStageStatus(
       int stageId, String status, double progress) async {
     try {
-      // تحديث في جدول المراحل إذا وجد
-      print('Updating stage $stageId to status $status with $progress%');
+      debugPrint('Updating stage $stageId to status $status with $progress%');
       return true;
     } catch (e) {
-      print('Error updating stage status: $e');
+      debugPrint('Error updating stage status: $e');
       return false;
     }
   }
 
-  // جلب إعدادات المشرف
   static Future<SupervisorSettings?> getSupervisorSettings(
       int supervisorId) async {
+    return SupervisorSettings(
+      id: 1,
+      supervisorId: supervisorId,
+      emailNotifications: true,
+      language: 'العربية',
+    );
+    /*
     try {
       final response = await client
           .from('supervisor_settings')
@@ -409,14 +454,16 @@ class SupabaseService {
       }
       return null;
     } catch (e) {
-      print('Error fetching supervisor settings: $e');
+      debugPrint('Error fetching supervisor settings: $e');
       return null;
     }
+    */
   }
 
-  // تحديث إعدادات المشرف
   static Future<bool> updateSupervisorSettings(
       SupervisorSettings settings) async {
+    return true;
+    /*
     try {
       if (settings.id != null) {
         await client
@@ -428,60 +475,126 @@ class SupabaseService {
       }
       return true;
     } catch (e) {
-      print('Error updating supervisor settings: $e');
+      debugPrint('Error updating supervisor settings: $e');
       return false;
     }
+    */
   }
 
-  // تحديث كلمة مرور المشرف
   static Future<bool> updateSupervisorPassword(
       int supervisorId, String newPassword) async {
+    return true;
+    /*
     try {
       await client.from('supervisor').update(
           {'sprvsr_password': newPassword}).eq('sprvsr_id', supervisorId);
       return true;
     } catch (e) {
-      print('Error updating supervisor password: $e');
+      debugPrint('Error updating supervisor password: $e');
       return false;
     }
+    */
+  }
+
+  // --- دوال الإشعارات ---
+
+  static Future<List<AppNotification>> getNotifications(
+      int supervisorId) async {
+    return MockData.notifications.where((n) => n.supervisorId == supervisorId).toList();
+  }
+
+  static Future<bool> markNotificationAsRead(int notificationId) async {
+    final index = MockData.notifications.indexWhere((n) => n.id == notificationId);
+    if (index != -1) {
+      final old = MockData.notifications[index];
+      MockData.notifications[index] = AppNotification(
+        id: old.id,
+        supervisorId: old.supervisorId,
+        title: old.title,
+        message: old.message,
+        createdAt: old.createdAt,
+        isRead: true,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  static Future<bool> markAllNotificationsAsRead(int supervisorId) async {
+    for (int i = 0; i < MockData.notifications.length; i++) {
+      if (MockData.notifications[i].supervisorId == supervisorId) {
+        final old = MockData.notifications[i];
+        MockData.notifications[i] = AppNotification(
+          id: old.id,
+          supervisorId: old.supervisorId,
+          title: old.title,
+          message: old.message,
+          createdAt: old.createdAt,
+          isRead: true,
+        );
+      }
+    }
+    return true;
+  }
+
+  static Future<bool> clearAllNotifications(int supervisorId) async {
+    MockData.notifications.removeWhere((n) => n.supervisorId == supervisorId);
+    return true;
+  }
+
+  static Future<bool> submitGrade(
+      int projectId, double total, String comment) async {
+    return true;
+    /*
+    try {
+      await client.from('project_grades').insert({
+        'id_group': projectId,
+        'total_grade': total,
+        'comment': comment,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Error submitting grade: $e');
+      return false;
+    }
+    */
   }
 
   // --- دوال الدردشة (Chat Functions) ---
 
-  // جلب المحادثات الخاصة بالمشرف
   static Future<List<Map<String, dynamic>>> getSupervisorChats(
       int supervisorId) async {
-    try {
-      final response = await client
-          .from('chats')
-          .select('*, groups(group_name)')
-          .eq('id_sprvsr', supervisorId)
-          .order('last_message_time', ascending: false);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      print('Error fetching supervisor chats: $e');
-      return [];
-    }
+    return [
+      {
+        'chat_id': 1,
+        'group_name': 'تأثير التسويق الرقمي',
+        'last_message': 'شكراً دكتور',
+        'last_message_time': DateTime.now().toIso8601String(),
+      }
+    ];
   }
 
-  // جلب رسائل محادثة معينة
   static Future<List<Map<String, dynamic>>> getChatMessages(int chatId) async {
-    try {
-      final response = await client
-          .from('messages')
-          .select()
-          .eq('id_chat', chatId)
-          .order('created_at', ascending: true);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      print('Error fetching chat messages: $e');
-      return [];
-    }
+    return [
+      {
+        'message_id': 1,
+        'message_text': 'مرحباً دكتور، هل يمكننا البدء؟',
+        'sender_role': 'student',
+        'created_at': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+      },
+      {
+        'message_id': 2,
+        'message_text': 'نعم بالتأكيد',
+        'sender_role': 'supervisor',
+        'created_at': DateTime.now().toIso8601String(),
+      }
+    ];
   }
 
-  // إرسال رسالة جديدة
   static Future<bool> sendMessage(
       int chatId, String text, String senderRole) async {
+    return true;
+    /*
     try {
       await client.from('messages').insert({
         'id_chat': chatId,
@@ -498,17 +611,21 @@ class SupabaseService {
 
       return true;
     } catch (e) {
-      print('Error sending message: $e');
+      debugPrint('Error sending message: $e');
       return false;
     }
+    */
   }
 
-  // الاستماع للرسائل الجديدة (Real-time)
   static Stream<List<Map<String, dynamic>>> getMessagesStream(int chatId) {
-    return client
-        .from('messages')
-        .stream(primaryKey: ['message_id'])
-        .eq('id_chat', chatId)
-        .order('created_at', ascending: true);
+    // محاكاة الـ Stream
+    return Stream.value([
+      {
+        'message_id': 1,
+        'message_text': 'مرحباً دكتور، هل يمكننا البدء؟',
+        'sender_role': 'student',
+        'created_at': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+      }
+    ]);
   }
 }

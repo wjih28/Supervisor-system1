@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/login_screen.dart'; // إضافة صفحة تسجيل الدخول
+// import 'package:supabase_flutter/supabase_flutter.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'views/login_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // تهيئة Supabase مباشرة بالقيم الثابتة
+  // تحميل متغيرات البيئة من ملف .env (معطل مؤقتاً للنموذج الأولي)
+  /*
+  await dotenv.load(fileName: ".env");
+
+  // تهيئة Supabase
   try {
     await Supabase.initialize(
-      url: "https://quakwoghhxoobcgcknsj.supabase.co",
-      anonKey:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1YWt3b2doaHhvb2JjZ2NrbnNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY0MjAyNTMsImV4cCI6MjA4MTk5NjI1M30.OYmQVRGhirs7cJDI64rRqQZss6RDnof8kABlZNQDHbA",
+      url: dotenv.env['SUPABASE_URL']!,
+      anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
     );
     debugPrint('✅ تم تهيئة Supabase بنجاح');
   } catch (e) {
     debugPrint('❌ فشل تهيئة Supabase: $e');
   }
+  */
+  debugPrint('ℹ️ يتم تشغيل النظام في وضع النموذج الأولي (Mock Data Mode)');
+
 
   runApp(const GraduationApp());
 }
@@ -39,7 +46,7 @@ class GraduationApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: const LoginScreen(), // تغيير إلى صفحة تسجيل الدخول
+      home: const LoginView(),
     );
   }
 }
