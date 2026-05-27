@@ -4,8 +4,13 @@ import '../../services/supabase_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Supervisor supervisor;
+  final bool isGuest;
 
-  const SettingsScreen({super.key, required this.supervisor});
+  const SettingsScreen({
+    super.key,
+    required this.supervisor,
+    this.isGuest = false,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -22,9 +27,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _programController = TextEditingController();
   final TextEditingController _employeeIdController = TextEditingController();
 
-  final TextEditingController _currentPasswordController = TextEditingController();
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -35,23 +42,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     setState(() => _isLoading = true);
     try {
-      _settings = await SupabaseService.getSupervisorSettings(widget.supervisor.id!);
-      if (_settings == null) {
-        _settings = SupervisorSettings(supervisorId: widget.supervisor.id!);
-      }
+      if (widget.isGuest) {
+        _settings = SupervisorSettings(
+          supervisorId: widget.supervisor.id!,
+          phoneNumber: '+968 1234 5678',
+          employeeId: 'GUEST-001',
+          language: 'العربية',
+          timezone: 'توقيت عدن (GMT+3)',
+          emailNotifications: true,
+          pushNotifications: true,
+          weeklyReports: false,
+        );
 
-      _nameController.text = widget.supervisor.name;
-      _emailController.text = widget.supervisor.email ?? '';
-      _phoneController.text = _settings?.phoneNumber ?? '';
-      _employeeIdController.text = _settings?.employeeId ?? '';
+        _nameController.text = widget.supervisor.name;
+        _emailController.text = widget.supervisor.email ?? 'guest@example.com';
+        _phoneController.text = _settings?.phoneNumber ?? '';
+        _employeeIdController.text = _settings?.employeeId ?? '';
+        _departmentController.text = 'إدارة الأعمال';
+        _programController.text = 'إدارة أعمال دولية';
+      } else {
+        _settings =
+            await SupabaseService.getSupervisorSettings(widget.supervisor.id!);
+        if (_settings == null) {
+          _settings = SupervisorSettings(supervisorId: widget.supervisor.id!);
+        }
 
-      // جلب بيانات القسم والبرنامج
-      if (widget.supervisor.programId != null) {
-        final program = await SupabaseService.getProgramById(widget.supervisor.programId!);
-        if (program != null) {
-          _programController.text = program.name;
-          final department = await SupabaseService.getDepartmentById(program.departmentId ?? 0);
-          _departmentController.text = department?.name ?? '';
+        _nameController.text = widget.supervisor.name;
+        _emailController.text = widget.supervisor.email ?? '';
+        _phoneController.text = _settings?.phoneNumber ?? '';
+        _employeeIdController.text = _settings?.employeeId ?? '';
+
+        // جلب بيانات القسم والبرنامج
+        if (widget.supervisor.programId != null) {
+          final program = await SupabaseService.getProgramById(
+              widget.supervisor.programId!);
+          if (program != null) {
+            _programController.text = program.name;
+            final department = await SupabaseService.getDepartmentById(
+                program.departmentId ?? 0);
+            _departmentController.text = department?.name ?? '';
+          }
         }
       }
     } catch (e) {
@@ -66,12 +96,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _isLoading = true);
     try {
+      if (widget.isGuest) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('عرض الضيف: البيانات لا تُحفظ فعلياً')),
+          );
+        }
+        return;
+      }
+
       final updatedSettings = _settings!.copyWith(
         phoneNumber: _phoneController.text,
         employeeId: _employeeIdController.text,
       );
 
-      final success = await SupabaseService.updateSupervisorSettings(updatedSettings);
+      final success =
+          await SupabaseService.updateSupervisorSettings(updatedSettings);
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم حفظ الإعدادات بنجاح')),
@@ -89,6 +130,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('كلمات المرور غير متطابقة')),
       );
+      return;
+    }
+
+    if (widget.isGuest) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('عرض الضيف: تغيير كلمة المرور غير متاح')),
+        );
+      }
       return;
     }
 
@@ -129,7 +180,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         elevation: 0,
         title: const Text(
           'نظام إدارة ومتابعة أبحاث التخرج',
-          style: TextStyle(color: Color(0xFF2D62ED), fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Color(0xFF2D62ED),
+              fontSize: 18,
+              fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -166,8 +220,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         label: const Text('حفظ التغييرات'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2D62ED),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
                       const Column(
@@ -175,7 +231,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text(
                             'الإعدادات',
-                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
+                            style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D3748)),
                           ),
                           Text(
                             'إدارة حسابك وتفضيلات النظام',
@@ -186,7 +245,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  _buildSectionHeader(Icons.person_outline, 'المعلومات الشخصية'),
+                  _buildSectionHeader(
+                      Icons.person_outline, 'المعلومات الشخصية'),
                   const SizedBox(height: 24),
                   _buildPersonalInfoSection(),
                   const SizedBox(height: 32),
@@ -218,7 +278,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
+          style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D3748)),
         ),
         const SizedBox(width: 12),
         Icon(icon, color: const Color(0xFF2D62ED)),
@@ -232,7 +295,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
       ),
       child: Column(
         children: [
@@ -244,9 +309,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   TextButton(
                     onPressed: () {},
-                    child: const Text('تغيير الصورة', style: TextStyle(color: Color(0xFF2D62ED))),
+                    child: const Text('تغيير الصورة',
+                        style: TextStyle(color: Color(0xFF2D62ED))),
                   ),
-                  const Text('JPG, PNG أو GIF (الحد الأقصى 2 ميجابايت)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const Text('JPG, PNG أو GIF (الحد الأقصى 2 ميجابايت)',
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ],
               ),
               const SizedBox(width: 24),
@@ -260,15 +327,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 32),
           Row(
             children: [
-              Expanded(child: _buildTextField('البريد الإلكتروني', _emailController, enabled: false)),
+              Expanded(
+                  child: _buildTextField('البريد الإلكتروني', _emailController,
+                      enabled: false)),
               const SizedBox(width: 20),
-              Expanded(child: _buildTextField('الاسم الكامل', _nameController, enabled: false)),
+              Expanded(
+                  child: _buildTextField('الاسم الكامل', _nameController,
+                      enabled: false)),
             ],
           ),
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildTextField('القسم', _departmentController, enabled: false)),
+              Expanded(
+                  child: _buildTextField('القسم', _departmentController,
+                      enabled: false)),
               const SizedBox(width: 20),
               Expanded(child: _buildTextField('رقم الهاتف', _phoneController)),
             ],
@@ -276,9 +349,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildTextField('الرقم الوظيفي', _employeeIdController)),
+              Expanded(
+                  child:
+                      _buildTextField('الرقم الوظيفي', _employeeIdController)),
               const SizedBox(width: 20),
-              Expanded(child: _buildTextField('البرنامج', _programController, enabled: false)),
+              Expanded(
+                  child: _buildTextField('البرنامج', _programController,
+                      enabled: false)),
             ],
           ),
         ],
@@ -292,7 +369,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
       ),
       child: Column(
         children: [
@@ -300,21 +379,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'إشعارات البريد الإلكتروني',
             'استلام إشعارات عبر البريد الإلكتروني',
             _settings?.emailNotifications ?? true,
-            (val) => setState(() => _settings = _settings?.copyWith(emailNotifications: val)),
+            (val) => setState(
+                () => _settings = _settings?.copyWith(emailNotifications: val)),
           ),
           const Divider(height: 32),
           _buildSwitchTile(
             'الإشعارات الفورية',
             'استلام إشعارات فورية على الجهاز',
             _settings?.pushNotifications ?? true,
-            (val) => setState(() => _settings = _settings?.copyWith(pushNotifications: val)),
+            (val) => setState(
+                () => _settings = _settings?.copyWith(pushNotifications: val)),
           ),
           const Divider(height: 32),
           _buildSwitchTile(
             'التقارير الأسبوعية',
             'استلام ملخص أسبوعي لحالة الأبحاث',
             _settings?.weeklyReports ?? false,
-            (val) => setState(() => _settings = _settings?.copyWith(weeklyReports: val)),
+            (val) => setState(
+                () => _settings = _settings?.copyWith(weeklyReports: val)),
           ),
         ],
       ),
@@ -327,25 +409,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _buildTextField('كلمة المرور الحالية', _currentPasswordController, isPassword: true),
+          _buildTextField('كلمة المرور الحالية', _currentPasswordController,
+              isPassword: true),
           const SizedBox(height: 20),
-          _buildTextField('كلمة المرور الجديدة', _newPasswordController, isPassword: true),
+          _buildTextField('كلمة المرور الجديدة', _newPasswordController,
+              isPassword: true),
           const SizedBox(height: 20),
-          _buildTextField('تأكيد كلمة المرور الجديدة', _confirmPasswordController, isPassword: true),
+          _buildTextField(
+              'تأكيد كلمة المرور الجديدة', _confirmPasswordController,
+              isPassword: true),
           const SizedBox(height: 24),
           OutlinedButton(
             onPressed: _updatePassword,
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Color(0xFF2D62ED)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('تحديث كلمة المرور', style: TextStyle(color: Color(0xFF2D62ED))),
+            child: const Text('تحديث كلمة المرور',
+                style: TextStyle(color: Color(0xFF2D62ED))),
           ),
         ],
       ),
@@ -358,16 +448,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
       ),
       child: Column(
         children: [
-          _buildDropdownTile('اللغة', ['العربية', 'English'], _settings?.language ?? 'العربية', (val) {
-            if (val != null) setState(() => _settings = _settings?.copyWith(language: val));
+          _buildDropdownTile(
+              'اللغة', ['العربية', 'English'], _settings?.language ?? 'العربية',
+              (val) {
+            if (val != null)
+              setState(() => _settings = _settings?.copyWith(language: val));
           }),
           const Divider(height: 32),
-          _buildDropdownTile('المنطقة الزمنية', ['توقيت عدن (GMT+3)', 'توقيت مكة (GMT+3)', 'توقيت دبي (GMT+4)'], _settings?.timezone ?? 'توقيت عدن (GMT+3)', (val) {
-            if (val != null) setState(() => _settings = _settings?.copyWith(timezone: val));
+          _buildDropdownTile(
+              'المنطقة الزمنية',
+              ['توقيت عدن (GMT+3)', 'توقيت مكة (GMT+3)', 'توقيت دبي (GMT+4)'],
+              _settings?.timezone ?? 'توقيت عدن (GMT+3)', (val) {
+            if (val != null)
+              setState(() => _settings = _settings?.copyWith(timezone: val));
           }),
         ],
       ),
@@ -380,7 +479,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
       ),
       child: const Column(
         children: [
@@ -397,9 +498,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('كلية العلوم الإدارية والإنسانية', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('كلية العلوم الإدارية والإنسانية',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               Text('الكلية:', style: TextStyle(color: Colors.grey)),
-              Text('جامعة العلوم والتكنولوجيا', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('جامعة العلوم والتكنولوجيا',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               Text('المؤسسة:', style: TextStyle(color: Colors.grey)),
             ],
           ),
@@ -408,11 +511,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool enabled = true, bool isPassword = false}) {
+  Widget _buildTextField(String label, TextEditingController controller,
+      {bool enabled = true, bool isPassword = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: Color(0xFF4A5568), fontWeight: FontWeight.w500)),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF4A5568),
+                fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -422,32 +530,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
           decoration: InputDecoration(
             filled: !enabled,
             fillColor: const Color(0xFFF7FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSwitchTile(String title, String subtitle, bool value, Function(bool) onChanged) {
+  Widget _buildSwitchTile(
+      String title, String subtitle, bool value, Function(bool) onChanged) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Switch(value: value, onChanged: onChanged, activeColor: const Color(0xFF2D62ED)),
+        Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: const Color(0xFF2D62ED)),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            Text(title,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(subtitle,
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildDropdownTile(String title, List<String> options, String value, Function(String?) onChanged) {
+  Widget _buildDropdownTile(String title, List<String> options, String value,
+      Function(String?) onChanged) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -459,12 +580,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           child: DropdownButton<String>(
             value: value,
-            items: options.map((String val) => DropdownMenuItem<String>(value: val, child: Text(val))).toList(),
+            items: options
+                .map((String val) =>
+                    DropdownMenuItem<String>(value: val, child: Text(val)))
+                .toList(),
             onChanged: onChanged,
             underline: const SizedBox(),
           ),
         ),
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }

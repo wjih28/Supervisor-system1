@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../domain/models/models.dart';
-import '../../domain/repositories/project_repository.dart';
-import '../../data/repositories/project_repository_impl.dart';
-import '../../data/datasources/mock/mock_project_datasource.dart';
-import '../../data/datasources/remote/remote_project_datasource.dart';
+import '../../models/models.dart';
+import '../../repositories/project_repository.dart';
+import '../../repositories/project_repository_impl.dart';
 
 class ChatsScreen extends StatefulWidget {
   final int supervisorId;
@@ -28,28 +26,45 @@ class _ChatsScreenState extends State<ChatsScreen> {
   List<ReviewComment> _messages = [];
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   late final ProjectRepository _projectRepository;
 
   @override
   void initState() {
     super.initState();
-    
-    _projectRepository = ProjectRepositoryImpl(
-      mockDataSource: MockProjectDataSource(),
-      remoteDataSource: RemoteProjectDataSource(),
-      useMock: true,
-    );
-    
+
+    _projectRepository = ProjectRepositoryImpl();
+
     _loadChats();
   }
 
   Future<void> _loadChats() async {
     setState(() => _isLoading = true);
     try {
-      _groups = await _projectRepository.getGroupsBySupervisor(widget.supervisorId);
-      if (_groups.isNotEmpty) {
-        _selectChat(_groups[0].id!);
+      if (widget.isGuest) {
+        _groups = [
+          ResearchGroup(
+            id: 201,
+            name: 'مجموعة النقاش التجريبية 1',
+            currentStage: 'التخطيط',
+            progress: 40,
+          ),
+          ResearchGroup(
+            id: 202,
+            name: 'مجموعة النقاش التجريبية 2',
+            currentStage: 'المراجعة',
+            progress: 65,
+          ),
+        ];
+        if (_groups.isNotEmpty) {
+          _selectChat(_groups[0].id!);
+        }
+      } else {
+        _groups =
+            await _projectRepository.getGroupsBySupervisor(widget.supervisorId);
+        if (_groups.isNotEmpty) {
+          _selectChat(_groups[0].id!);
+        }
       }
     } catch (e) {
       debugPrint('خطأ في تحميل المحادثات: $e');
@@ -63,7 +78,28 @@ class _ChatsScreenState extends State<ChatsScreen> {
       _selectedGroupId = groupId;
       _messages = [];
     });
-    _loadMessages(groupId);
+    if (widget.isGuest) {
+      _messages = [
+        ReviewComment(
+          id: 1,
+          groupId: groupId,
+          supervisorId: 0,
+          comment: 'مرحباً! هذا الحوار التجريبي لعرض واجهة المحادثات.',
+          createdAt: DateTime.now().subtract(const Duration(minutes: 45)),
+        ),
+        ReviewComment(
+          id: 2,
+          groupId: groupId,
+          supervisorId: null,
+          comment: 'شكراً لك، أريد رؤية حالة المشروع وكيفية التقدم.',
+          createdAt: DateTime.now().subtract(const Duration(minutes: 20)),
+        ),
+      ];
+      setState(() {});
+      _scrollToBottom();
+    } else {
+      _loadMessages(groupId);
+    }
   }
 
   Future<void> _loadMessages(int groupId) async {
@@ -85,13 +121,31 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty || _selectedGroupId == null) return;
+    if (_messageController.text.trim().isEmpty || _selectedGroupId == null)
+      return;
 
     final text = _messageController.text.trim();
     _messageController.clear();
 
+    if (widget.isGuest) {
+      setState(() {
+        _messages.add(ReviewComment(
+          groupId: _selectedGroupId,
+          comment: text,
+          supervisorId: widget.supervisorId,
+          createdAt: DateTime.now(),
+        ));
+      });
+      _scrollToBottom();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('هذه المحادثة عرضية ولا تُرسل فعلياً')),
+      );
+      return;
+    }
+
     try {
-      await _projectRepository.sendMessage(_selectedGroupId!, widget.supervisorId, text);
+      await _projectRepository.sendMessage(
+          _selectedGroupId!, widget.supervisorId, text);
       _loadMessages(_selectedGroupId!);
     } catch (e) {
       debugPrint('خطأ في إرسال الرسالة: $e');
@@ -126,7 +180,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
           onTap: () => _selectChat(group.id!),
           selected: isSelected,
           selectedTileColor: Colors.blue.withOpacity(0.1),
-          title: Text(group.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          title: Text(group.name,
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           subtitle: const Text('آخر رسالة...', style: TextStyle(fontSize: 12)),
         );
       },
@@ -153,10 +209,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isMe ? const Color(0xFF2D62ED) : Colors.grey.shade200,
+                    color:
+                        isMe ? const Color(0xFF2D62ED) : Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(msg.comment, style: TextStyle(color: isMe ? Colors.white : Colors.black)),
+                  child: Text(msg.comment,
+                      style:
+                          TextStyle(color: isMe ? Colors.white : Colors.black)),
                 ),
               );
             },
@@ -169,10 +228,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
               Expanded(
                 child: TextField(
                   controller: _messageController,
-                  decoration: const InputDecoration(hintText: 'اكتب رسالة...', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                      hintText: 'اكتب رسالة...', border: OutlineInputBorder()),
                 ),
               ),
-              IconButton(icon: const Icon(Icons.send, color: Color(0xFF2D62ED)), onPressed: _sendMessage),
+              IconButton(
+                  icon: const Icon(Icons.send, color: Color(0xFF2D62ED)),
+                  onPressed: _sendMessage),
             ],
           ),
         ),

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
-import '../../domain/models/models.dart';
-import '../../domain/repositories/project_repository.dart';
-import '../../data/repositories/project_repository_impl.dart';
-import '../../data/datasources/remote/remote_project_datasource.dart';
+import '../../models/models.dart';
+import '../../repositories/project_repository.dart';
+import '../../repositories/project_repository_impl.dart';
 
 class GradesEntry extends StatefulWidget {
   final int supervisorId;
+  final bool isGuest;
 
-  const GradesEntry({super.key, required this.supervisorId});
+  const GradesEntry({
+    super.key,
+    required this.supervisorId,
+    this.isGuest = false,
+  });
 
   @override
   State<GradesEntry> createState() => _GradesEntryState();
@@ -16,22 +19,55 @@ class GradesEntry extends StatefulWidget {
 
 class _GradesEntryState extends State<GradesEntry> {
   bool _isLoading = true;
-  List<ResearchGroup> _groups = [];
+
   late final ProjectRepository _projectRepository;
+  List<ResearchGroup> _projects = [];
+  final Map<int, Map<String, double>> _grades = {};
+  final List<Map<String, String>> _criteria = [
+    {'key': 'content', 'name': 'جودة المحتوى', 'max': '30'},
+    {'key': 'methodology', 'name': 'المنهجية', 'max': '25'},
+    {'key': 'analysis', 'name': 'التحليل والنتائج', 'max': '25'},
+    {'key': 'presentation', 'name': 'التقديم والعرض', 'max': '20'},
+  ];
 
   @override
   void initState() {
     super.initState();
-    _projectRepository = ProjectRepositoryImpl(
-      remoteDataSource: RemoteProjectDataSource(),
-    );
-    _loadData();
+
+    _projectRepository = ProjectRepositoryImpl();
+
+    _loadProjects();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadProjects() async {
     setState(() => _isLoading = true);
     try {
-      _groups = await _projectRepository.getGroupsBySupervisor(widget.supervisorId);
+      if (widget.isGuest) {
+        _projects = [
+          ResearchGroup(
+            id: 301,
+            name: 'مجموعة تجريبية للدرجات 1',
+            progress: 60,
+            currentStage: 'التقييم',
+          ),
+          ResearchGroup(
+            id: 302,
+            name: 'مجموعة تجريبية للدرجات 2',
+            progress: 85,
+            currentStage: 'المرحلة النهائية',
+          ),
+        ];
+      } else {
+        _projects =
+            await _projectRepository.getGroupsBySupervisor(widget.supervisorId);
+      }
+
+      for (var project in _projects) {
+        _grades[project.id!] = {};
+        for (var criteria in _criteria) {
+          _grades[project.id!]![criteria['key']!] = 0;
+        }
+      }
     } catch (e) {
       debugPrint('Error: $e');
     } finally {
@@ -39,10 +75,42 @@ class _GradesEntryState extends State<GradesEntry> {
     }
   }
 
+  double _calculateTotal(int projectId) {
+    final grades = _grades[projectId] ?? {};
+    double total = 0;
+    for (var criteria in _criteria) {
+      total += grades[criteria['key']] ?? 0;
+    }
+    return total;
+  }
+
+  Future<void> _saveGrades(int projectId) async {
+    final total = _calculateTotal(projectId);
+    if (widget.isGuest) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'عرض الضيف: الدرجات لن تُحفظ. المجموع التجريبي: $total')),
+        );
+      }
+      return;
+    }
+
+    await _projectRepository.submitGrade(
+        projectId, total, "تم رصد الدرجات النهائية");
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حفظ الدرجات بنجاح')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text('إدخال الدرجات النهائية'),
         actions: [
@@ -53,9 +121,10 @@ class _GradesEntryState extends State<GradesEntry> {
               icon: const Icon(Icons.save, size: 18),
               label: const Text('حفظ الدرجات'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.successGreen,
+                backgroundColor: const Color(0xFF2D62ED),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ),
@@ -63,183 +132,93 @@ class _GradesEntryState extends State<GradesEntry> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'إدخال ومتابعة درجات الطلاب في أبحاث التخرج',
-                    style: TextStyle(color: AppColors.textGrey),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(child: _buildStatCard('إجمالي الطلاب', '8', AppColors.primaryBlue)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildStatCard('تم إدخال الدرجات', '4', AppColors.successGreen)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildStatCard('في انتظار الإدخال', '4', AppColors.warningOrange)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildStatCard('المعدل العام', '90.0', Color(0xFF7C3AED))),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  _buildGradesTable(),
-                  const SizedBox(height: 40),
-                  _buildGradesKey(),
-                ],
-              ),
-            ),
+          : _projects.isEmpty
+              ? const Center(child: Text('لا توجد مشاريع مسندة إليك'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _projects.length,
+                  itemBuilder: (context, index) {
+                    final project = _projects[index];
+                    final total = _calculateTotal(project.id!);
+                    final maxTotal = _criteria.fold<double>(
+                        0, (sum, c) => sum + double.parse(c['max']!));
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: ExpansionTile(
+                        title: Text(project.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('الإجمالي: $total / $maxTotal'),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                ..._criteria.map((criteria) => _buildGradeRow(
+                                      project.id!,
+                                      criteria['key']!,
+                                      criteria['name']!,
+                                      double.parse(criteria['max']!),
+                                    )),
+                                const Divider(height: 32),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () => _saveGrades(project.id!),
+                                      child: const Text('حفظ الدرجات'),
+                                    ),
+                                    Text('الإجمالي: $total / $maxTotal',
+                                        style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF2D62ED))),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGradesTable() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          _buildTableHeader(),
-          _buildTableRow(1, 'أحمد محمد علي', 'تأثير التسويق الرقمي على سلوك المستهلك', 'قائد الفريق', '95', 'ممتاز'),
-          _buildTableRow(2, 'فاطمة سعيد حسن', 'تأثير التسويق الرقمي على سلوك المستهلك', 'عضو', '88', 'جيد جداً'),
-          _buildTableRow(3, 'سارة علي محسن', 'دور الذكاء الاصطناعي في تطوير الأعمال', 'عضو', '', ''),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.grey.shade50,
-      child: const Row(
-        children: [
-          SizedBox(width: 40, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(flex: 2, child: Text('اسم الطالب', style: TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(flex: 3, child: Text('عنوان البحث', style: TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(flex: 1, child: Text('الدور', style: TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(flex: 1, child: Text('الدرجة (من 100)', style: TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(flex: 1, child: Text('التقدير', style: TextStyle(fontWeight: FontWeight.bold))),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableRow(int id, String name, String research, String role, String grade, String rating) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.grey.shade100)),
-      ),
+  Widget _buildGradeRow(int projectId, String key, String name, double max) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          SizedBox(width: 40, child: Text(id.toString())),
-          Expanded(flex: 2, child: Text(name)),
-          Expanded(flex: 3, child: Text(research, style: const TextStyle(fontSize: 13))),
-          Expanded(flex: 1, child: _buildRoleTag(role)),
+          SizedBox(
+              width: 100,
+              child: Text(name,
+                  style: const TextStyle(fontSize: 14),
+                  textAlign: TextAlign.right)),
           Expanded(
-            flex: 1,
-            child: Container(
-              margin: const EdgeInsets.only(right: 20),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: grade.isEmpty ? 'أدخل الدرجة' : grade,
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                style: const TextStyle(fontSize: 13),
-              ),
+            child: Slider(
+              value: _grades[projectId]?[key] ?? 0,
+              min: 0,
+              max: max,
+              divisions: max.toInt(),
+              label: '${_grades[projectId]?[key] ?? 0}',
+              onChanged: (value) {
+                setState(() {
+                  _grades[projectId]![key] = value;
+                });
+              },
             ),
           ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              rating,
-              style: TextStyle(
-                color: rating == 'ممتاز' ? AppColors.successGreen : AppColors.primaryBlue,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          SizedBox(
+              width: 60,
+              child: Text('${_grades[projectId]?[key]?.toInt() ?? 0}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.bold))),
         ],
       ),
-    );
-  }
-
-  Widget _buildRoleTag(String role) {
-    final isLeader = role == 'قائد الفريق';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isLeader ? AppColors.primaryBlue : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        role,
-        style: TextStyle(
-          color: isLeader ? Colors.white : AppColors.textGrey,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildGradesKey() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('مفتاح التقديرات', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            _buildKeyItem('ممتاز: 90-100', AppColors.successGreen),
-            const SizedBox(width: 20),
-            _buildKeyItem('جيد جداً: 80-89', AppColors.primaryBlue),
-            const SizedBox(width: 20),
-            _buildKeyItem('جيد: 70-79', AppColors.warningOrange),
-            const SizedBox(width: 20),
-            _buildKeyItem('مقبول: 60-69', Colors.deepOrange),
-            const SizedBox(width: 20),
-            _buildKeyItem('ضعيف: أقل من 60', AppColors.errorRed),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildKeyItem(String text, Color color) {
-    return Row(
-      children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 8),
-        Text(text, style: const TextStyle(fontSize: 12, color: AppColors.textGrey)),
-      ],
     );
   }
 }

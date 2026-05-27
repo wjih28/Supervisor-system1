@@ -29,12 +29,11 @@ class SupabaseService {
   }
 
   // جلب المجموعات التابعة للمشرف
-  static Future<List<ResearchGroup>> getGroupsBySupervisor(int supervisorId) async {
+  static Future<List<ResearchGroup>> getGroupsBySupervisor(
+      int supervisorId) async {
     try {
-      final response = await client
-          .from('groups')
-          .select()
-          .eq('id_sprvsr', supervisorId);
+      final response =
+          await client.from('groups').select().eq('id_sprvsr', supervisorId);
 
       return (response as List)
           .map((json) => ResearchGroup.fromJson(json))
@@ -48,11 +47,8 @@ class SupabaseService {
   // جلب بيانات المشروع بواسطة المعرف
   static Future<ResearchGroup?> getProjectById(int id) async {
     try {
-      final response = await client
-          .from('groups')
-          .select()
-          .eq('group_id', id)
-          .maybeSingle();
+      final response =
+          await client.from('groups').select().eq('group_id', id).maybeSingle();
 
       if (response != null) {
         return ResearchGroup.fromJson(response);
@@ -67,14 +63,10 @@ class SupabaseService {
   // جلب طلاب مجموعة معينة
   static Future<List<Student>> getGroupStudents(int groupId) async {
     try {
-      final response = await client
-          .from('student')
-          .select()
-          .eq('id_group', groupId);
+      final response =
+          await client.from('student').select().eq('id_group', groupId);
 
-      return (response as List)
-          .map((json) => Student.fromJson(json))
-          .toList();
+      return (response as List).map((json) => Student.fromJson(json)).toList();
     } catch (e) {
       print('Error fetching group students: $e');
       return [];
@@ -99,9 +91,11 @@ class SupabaseService {
   }
 
   // جلب ملفات مشروع معين حسب المرحلة
-  static Future<List<ProjectFile>> getProjectFiles(int projectId, {String? stage}) async {
+  static Future<List<ProjectFile>> getProjectFiles(int projectId,
+      {String? stage}) async {
     try {
-      var query = client.from('research_files').select().eq('id_group', projectId);
+      var query =
+          client.from('research_files').select().eq('id_group', projectId);
       if (stage != null) {
         query = query.eq('file_stage', stage);
       }
@@ -173,15 +167,13 @@ class SupabaseService {
   }
 
   // تحديث حالة المجموعة ونسبة الإنجاز
-  static Future<bool> updateGroupStatus(int groupId, String status, double progress) async {
+  static Future<bool> updateGroupStatus(
+      int groupId, String status, double progress) async {
     try {
-      await client
-          .from('groups')
-          .update({
-            'group_status': status,
-            'group_progress': progress,
-          })
-          .eq('group_id', groupId);
+      await client.from('groups').update({
+        'group_status': status,
+        'group_progress': progress,
+      }).eq('group_id', groupId);
       return true;
     } catch (e) {
       print('Error updating group status: $e');
@@ -194,8 +186,7 @@ class SupabaseService {
     try {
       await client
           .from('groups')
-          .update({'current_stage': stage})
-          .eq('group_id', projectId);
+          .update({'current_stage': stage}).eq('group_id', projectId);
       return true;
     } catch (e) {
       print('Error updating project stage: $e');
@@ -208,8 +199,7 @@ class SupabaseService {
     try {
       await client
           .from('research_files')
-          .update({'supervisor_notes': note})
-          .eq('file_id', fileId);
+          .update({'supervisor_notes': note}).eq('file_id', fileId);
       return true;
     } catch (e) {
       print('Error adding supervisor note: $e');
@@ -218,7 +208,8 @@ class SupabaseService {
   }
 
   // إضافة ملاحظة/تعليق مراجعة على المشروع
-  static Future<bool> addProjectFeedback(int projectId, int supervisorId, String stage, String comment) async {
+  static Future<bool> addProjectFeedback(
+      int projectId, int supervisorId, String stage, String comment) async {
     try {
       await client.from('review_comments').insert({
         'id_group': projectId,
@@ -239,8 +230,7 @@ class SupabaseService {
     try {
       await client
           .from('review_comments')
-          .update({'is_resolved': true})
-          .eq('comment_id', feedbackId);
+          .update({'is_resolved': true}).eq('comment_id', feedbackId);
       return true;
     } catch (e) {
       print('Error resolving feedback: $e');
@@ -286,7 +276,8 @@ class SupabaseService {
   }
 
   // جلب إحصائيات المشرف
-  static Future<Map<String, dynamic>?> getSupervisorStatistics(int supervisorId) async {
+  static Future<Map<String, dynamic>?> getSupervisorStatistics(
+      int supervisorId) async {
     try {
       final groups = await getGroupsBySupervisor(supervisorId);
       int total = groups.length;
@@ -310,10 +301,8 @@ class SupabaseService {
   // جلب التعليقات حسب المجموعة
   static Future<List<ReviewComment>> getCommentsByGroup(int groupId) async {
     try {
-      final response = await client
-          .from('review_comments')
-          .select()
-          .eq('id_group', groupId);
+      final response =
+          await client.from('review_comments').select().eq('id_group', groupId);
       return (response as List)
           .map((json) => ReviewComment.fromJson(json))
           .toList();
@@ -326,10 +315,8 @@ class SupabaseService {
   // جلب الملفات حسب المجموعة
   static Future<List<ProjectFile>> getFilesByGroup(int groupId) async {
     try {
-      final response = await client
-          .from('research_files')
-          .select()
-          .eq('id_group', groupId);
+      final response =
+          await client.from('research_files').select().eq('id_group', groupId);
       return (response as List)
           .map((json) => ProjectFile.fromJson(json))
           .toList();
@@ -344,9 +331,12 @@ class SupabaseService {
     try {
       // يمكن جلبها من جدول مراحل مخصص أو استنتاجها من البيانات
       return [
-        ProjectStage(id: 1, name: 'المقترح', status: 'completed', progress: 1.0),
-        ProjectStage(id: 2, name: 'خطة البحث', status: 'in_progress', progress: 0.7),
-        ProjectStage(id: 3, name: 'البحث النهائي', status: 'pending', progress: 0.0),
+        ProjectStage(
+            id: 1, name: 'المقترح', status: 'completed', progress: 1.0),
+        ProjectStage(
+            id: 2, name: 'خطة البحث', status: 'in_progress', progress: 0.7),
+        ProjectStage(
+            id: 3, name: 'البحث النهائي', status: 'pending', progress: 0.0),
       ];
     } catch (e) {
       print('Error fetching project stages: $e');
@@ -366,7 +356,8 @@ class SupabaseService {
   }
 
   // تحديث تعليق
-  static Future<bool> updateComment(int commentId, ReviewComment comment) async {
+  static Future<bool> updateComment(
+      int commentId, ReviewComment comment) async {
     try {
       await client
           .from('review_comments')
@@ -391,7 +382,8 @@ class SupabaseService {
   }
 
   // تحديث حالة المرحلة
-  static Future<bool> updateStageStatus(int stageId, String status, double progress) async {
+  static Future<bool> updateStageStatus(
+      int stageId, String status, double progress) async {
     try {
       // تحديث في جدول المراحل إذا وجد
       print('Updating stage $stageId to status $status with $progress%');
@@ -403,7 +395,8 @@ class SupabaseService {
   }
 
   // جلب إعدادات المشرف
-  static Future<SupervisorSettings?> getSupervisorSettings(int supervisorId) async {
+  static Future<SupervisorSettings?> getSupervisorSettings(
+      int supervisorId) async {
     try {
       final response = await client
           .from('supervisor_settings')
@@ -422,7 +415,8 @@ class SupabaseService {
   }
 
   // تحديث إعدادات المشرف
-  static Future<bool> updateSupervisorSettings(SupervisorSettings settings) async {
+  static Future<bool> updateSupervisorSettings(
+      SupervisorSettings settings) async {
     try {
       if (settings.id != null) {
         await client
@@ -440,12 +434,11 @@ class SupabaseService {
   }
 
   // تحديث كلمة مرور المشرف
-  static Future<bool> updateSupervisorPassword(int supervisorId, String newPassword) async {
+  static Future<bool> updateSupervisorPassword(
+      int supervisorId, String newPassword) async {
     try {
-      await client
-          .from('supervisor')
-          .update({'sprvsr_password': newPassword})
-          .eq('sprvsr_id', supervisorId);
+      await client.from('supervisor').update(
+          {'sprvsr_password': newPassword}).eq('sprvsr_id', supervisorId);
       return true;
     } catch (e) {
       print('Error updating supervisor password: $e');
@@ -456,7 +449,8 @@ class SupabaseService {
   // --- دوال الدردشة (Chat Functions) ---
 
   // جلب المحادثات الخاصة بالمشرف
-  static Future<List<Map<String, dynamic>>> getSupervisorChats(int supervisorId) async {
+  static Future<List<Map<String, dynamic>>> getSupervisorChats(
+      int supervisorId) async {
     try {
       final response = await client
           .from('chats')
@@ -486,7 +480,8 @@ class SupabaseService {
   }
 
   // إرسال رسالة جديدة
-  static Future<bool> sendMessage(int chatId, String text, String senderRole) async {
+  static Future<bool> sendMessage(
+      int chatId, String text, String senderRole) async {
     try {
       await client.from('messages').insert({
         'id_chat': chatId,
@@ -494,13 +489,13 @@ class SupabaseService {
         'sender_role': senderRole,
         'created_at': DateTime.now().toIso8601String(),
       });
-      
+
       // تحديث وقت آخر رسالة في المحادثة
       await client.from('chats').update({
         'last_message': text,
         'last_message_time': DateTime.now().toIso8601String(),
       }).eq('chat_id', chatId);
-      
+
       return true;
     } catch (e) {
       print('Error sending message: $e');

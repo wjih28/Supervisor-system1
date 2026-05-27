@@ -26,7 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final String password = _passwordController.text;
 
     try {
-      final response = await SupabaseService.loginSupervisor(username, password);
+      final response =
+          await SupabaseService.loginSupervisor(username, password);
 
       if (response != null && response['role'] == 'supervisor') {
         final Supervisor supervisor = response['user'];
@@ -84,7 +85,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: const Color(0xFF2D62ED).withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.school, color: Color(0xFF2D62ED), size: 48),
+                  child: const Icon(Icons.school,
+                      color: Color(0xFF2D62ED), size: 48),
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -107,7 +109,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'اسم المستخدم أو البريد الإلكتروني',
                     prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -121,7 +124,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'كلمة المرور',
                     prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -143,16 +147,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     backgroundColor: const Color(0xFF2D62ED),
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
                   child: _isLoading
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text('تسجيل الدخول', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : const Text('تسجيل الدخول',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
@@ -160,13 +168,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SupervisorDashboard(isGuest: true),
+                        builder: (context) =>
+                            const SupervisorDashboard(isGuest: true),
                       ),
                     );
                   },
                   child: const Text(
                     'الدخول كضيف (مشرف)',
-                    style: TextStyle(color: Color(0xFF2D62ED), fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Color(0xFF2D62ED), fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
