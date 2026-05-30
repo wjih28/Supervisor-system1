@@ -243,6 +243,7 @@ class _DesktopLayoutState extends State<DesktopLayout> {
             children: [
               // Notifications
               Stack(
+                clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
                   IconButton(
@@ -344,41 +345,34 @@ class _DesktopLayoutState extends State<DesktopLayout> {
     return Container(
       width: 250,
       color: Colors.white,
-      child: Column(
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
         children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              children: [
-                _buildSidebarItem(0, Icons.grid_view_rounded, 'لوحة التحكم'),
-                _buildSidebarItem(1, Icons.people_outline, 'إدارة المجموعات'),
-                _buildSidebarItem(2, Icons.chat_bubble_outline, 'الدردشات'),
-                _buildSidebarItem(3, Icons.edit_note_rounded, 'إدخال الدرجات النهائية'),
-                _buildSidebarItem(4, Icons.settings, 'الإعدادات'),
-              ],
-            ),
-          ),
+          _buildSidebarItem(0, Icons.grid_view_rounded, 'لوحة التحكم'),
+          _buildSidebarItem(1, Icons.people_outline, 'إدارة المجموعات'),
+          _buildSidebarItem(2, Icons.chat_bubble_outline, 'الدردشات'),
+          _buildSidebarItem(3, Icons.edit_note_rounded, 'إدخال الدرجات النهائية'),
+          _buildSidebarItem(4, Icons.settings, 'الإعدادات'),
+          const SizedBox(height: 8),
           const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              onTap: () async {
-                try {
-                  await Supabase.instance.client.auth.signOut();
-                } catch (e) {
-                  // Ignore errors if mock mode or no session
-                }
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginView()),
-                    (Route<dynamic> route) => false,
-                  );
-                }
-              },
-            ),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            onTap: () async {
+              try {
+                await Supabase.instance.client.auth.signOut();
+              } catch (e) {
+                // Ignore errors if mock mode or no session
+              }
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginView()),
+                  (Route<dynamic> route) => false,
+                );
+              }
+            },
           ),
         ],
       ),

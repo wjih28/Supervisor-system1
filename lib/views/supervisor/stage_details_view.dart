@@ -26,6 +26,14 @@ class StageDetailsView extends StatefulWidget {
 }
 
 class _StageDetailsViewState extends State<StageDetailsView> {
+  final List<Map<String, String>> _stage2Reqs = [
+    {'title': 'المقدمة', 'status': 'approved'},
+    {'title': 'مشكلة الدراسة', 'status': 'approved'},
+    {'title': 'أهمية الدراسة', 'status': 'needs_edit'},
+    {'title': 'أهداف الدراسة', 'status': 'approved'},
+    {'title': 'فرضيات الدراسة', 'status': 'needs_edit'},
+  ];
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
@@ -321,19 +329,14 @@ class _StageDetailsViewState extends State<StageDetailsView> {
   }
 
   Widget _buildStageRequirementsCard() {
-    final reqs = [
-      {'title': 'المقدمة', 'status': 'approved'},
-      {'title': 'مشكلة الدراسة', 'status': 'approved'},
-      {'title': 'أهمية الدراسة', 'status': 'needs_edit'},
-      {'title': 'أهداف الدراسة', 'status': 'approved'},
-      {'title': 'فرضيات الدراسة', 'status': 'needs_edit'},
-    ];
-
     return _buildCard(
       title: 'متطلبات المرحلة الثانية',
       child: Column(
-        children: reqs.map((r) {
+        children: _stage2Reqs.asMap().entries.map((entry) {
+          final int index = entry.key;
+          final r = entry.value;
           final isApproved = r['status'] == 'approved';
+          
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -358,7 +361,18 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                   style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFF59E0B))),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    setState(() {
+                      _stage2Reqs[index]['status'] = 'approved';
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تم الاعتماد بنجاح'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.check_circle_outline, size: 16),
                   label: const Text('اعتماد'),
                   style: ElevatedButton.styleFrom(
@@ -387,7 +401,7 @@ class _StageDetailsViewState extends State<StageDetailsView> {
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 120,
               height: 120,
               child: Stack(
@@ -396,10 +410,10 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                   CircularProgressIndicator(
                     value: 0.68,
                     strokeWidth: 12,
-                    backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2D62ED)),
+                    backgroundColor: Color(0xFFE5E7EB),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2D62ED)),
                   ),
-                  const Center(
+                  Center(
                     child: Text(
                       '68%',
                       style: TextStyle(
@@ -727,7 +741,7 @@ class _StageDetailsViewState extends State<StageDetailsView> {
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 100,
                 height: 100,
                 child: Stack(
@@ -736,10 +750,10 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                     CircularProgressIndicator(
                       value: 0.60,
                       strokeWidth: 10,
-                      backgroundColor: const Color(0xFFE5E7EB),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                      backgroundColor: Color(0xFFE5E7EB),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
                     ),
-                    const Center(
+                    Center(
                       child: Text('60%', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
                     ),
                   ],
@@ -962,11 +976,11 @@ class _StageDetailsViewState extends State<StageDetailsView> {
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Row(
+            title: const Row(
               children: [
-                const Icon(Icons.find_in_page_outlined, color: Color(0xFF2D62ED)),
-                const SizedBox(width: 8),
-                const Expanded(
+                Icon(Icons.find_in_page_outlined, color: Color(0xFF2D62ED)),
+                SizedBox(width: 8),
+                Expanded(
                   child: Text(
                     'تفاصيل المستند المرفق',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

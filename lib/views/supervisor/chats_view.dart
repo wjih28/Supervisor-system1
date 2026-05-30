@@ -227,10 +227,10 @@ class _ChatsViewState extends State<ChatsView> {
                       const SizedBox(width: 12),
                       
                       // Avatar
-                      CircleAvatar(
+                      const CircleAvatar(
                         radius: 24,
-                        backgroundColor: const Color(0xFFDBEAFE),
-                        child: const Icon(Icons.person, color: Color(0xFF2D62ED)),
+                        backgroundColor: Color(0xFFDBEAFE),
+                        child: Icon(Icons.person, color: Color(0xFF2D62ED)),
                       ),
                     ],
                   ),
@@ -276,10 +276,10 @@ class _ChatsViewState extends State<ChatsView> {
                 ],
               ),
               const SizedBox(width: 16),
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 24,
-                backgroundColor: const Color(0xFFDBEAFE),
-                child: const Icon(Icons.person, color: Color(0xFF2D62ED)),
+                backgroundColor: Color(0xFFDBEAFE),
+                child: Icon(Icons.person, color: Color(0xFF2D62ED)),
               ),
             ],
           ),

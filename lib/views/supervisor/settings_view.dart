@@ -517,7 +517,7 @@ class _SettingsViewState extends State<SettingsView> {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: Colors.white,
+          activeThumbColor: Colors.white,
           activeTrackColor: const Color(0xFF1E1E1E), // Dark color like in screenshot
           inactiveThumbColor: Colors.white,
           inactiveTrackColor: Colors.grey.shade300,

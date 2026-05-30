@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../controllers/dashboard_controller.dart';
 import '../models/models.dart';
-import 'supervisor/projects_list_view.dart';
-import 'supervisor/grades_entry_view.dart';
-import 'supervisor/chats_view.dart';
-import 'supervisor/settings_view.dart';
 import 'widgets/desktop_layout.dart';
 
 class DashboardView extends StatefulWidget {
@@ -21,7 +16,6 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView> {
   final DashboardController _controller = DashboardController();
 
-  Supervisor get _guestSupervisor => _controller.guestSupervisor;
 
   @override
   void initState() {
@@ -303,7 +297,7 @@ class _DashboardViewState extends State<DashboardView> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () {},
+              onPressed: () => _showAllFilesDialog(context, group),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFF2D62ED)),
                 shape: RoundedRectangleBorder(
@@ -329,16 +323,6 @@ class _DashboardViewState extends State<DashboardView> {
   // ---------------------------------------------------------
   // DESKTOP LAYOUT
   // ---------------------------------------------------------
-
-  Widget _buildDesktopLayout() {
-    return DesktopLayout(
-      selectedIndex: 0,
-      supervisor: widget.supervisor,
-      isGuest: widget.isGuest,
-      supervisorName: _controller.supervisorName,
-      child: _buildDesktopContent(),
-    );
-  }
 
   Widget _buildDesktopContent() {
     return SingleChildScrollView(
@@ -684,7 +668,7 @@ class _DashboardViewState extends State<DashboardView> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () {},
+              onPressed: () => _showAllFilesDialog(context, group),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFF2D62ED)),
                 shape: RoundedRectangleBorder(
@@ -703,6 +687,150 @@ class _DashboardViewState extends State<DashboardView> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showAllFilesDialog(BuildContext context, ResearchGroup group) {
+    final List<Map<String, String>> allMockFiles = group.id == 2 ? [
+      {'name': 'المرحلة الرابعة - إنجاز الدراسات الميدانية.pdf', 'date': '2023-10-15', 'size': '2.4 MB'},
+      {'name': 'المرحلة الخامسة - إنجاز مشروع البحث.pdf', 'date': '2023-10-18', 'size': '5.1 MB'},
+      {'name': 'المرحلة السادسة - مناقشة البحث.pdf', 'date': '2023-11-01', 'size': '1.2 MB'},
+    ] : [
+      {'name': 'المرحلة الأولى - اختيار عنوان البحث.pdf', 'date': '2023-09-01', 'size': '1.5 MB'},
+      {'name': 'المرحلة الثانية - إنجاز الخطة.pdf', 'date': '2023-09-15', 'size': '3.2 MB'},
+      {'name': 'المرحلة الثالثة - جمع المراجع.pdf', 'date': '2023-10-01', 'size': '4.8 MB'},
+      {'name': 'مسودة البحث الأولى.pdf', 'date': '2023-10-10', 'size': '12.5 MB'},
+    ];
+
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            width: isMobile ? double.infinity : 600,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'جميع ملفات: ${group.name}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: allMockFiles.length,
+                    itemBuilder: (context, index) {
+                      final file = allMockFiles[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.picture_as_pdf, color: Colors.red, size: 36),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    file['name']!,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1F2937),
+                                      fontSize: 14,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'تاريخ الإضافة: ${file['date']} • الحجم: ${file['size']}',
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            isMobile 
+                              ? IconButton(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('تم تنزيل الملف بنجاح'),
+                                        backgroundColor: Colors.green,
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.download, color: Color(0xFF2D62ED)),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: const Color(0xFFE0E7FF),
+                                  ),
+                                )
+                              : ElevatedButton.icon(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('تم تنزيل الملف بنجاح'),
+                                        backgroundColor: Colors.green,
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.download, size: 18),
+                                  label: const Text('تنزيل'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2D62ED),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  ),
+                                ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

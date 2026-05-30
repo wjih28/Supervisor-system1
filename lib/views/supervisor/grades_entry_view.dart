@@ -65,17 +65,19 @@ class _GradesEntryViewState extends State<GradesEntryView> {
             ? const Center(child: CircularProgressIndicator())
             : Padding(
                 padding: EdgeInsets.all(_isMobile ? 16.0 : 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 24),
-                    _buildStatsCards(),
-                    const SizedBox(height: 24),
-                    Expanded(child: _buildStudentsTable()),
-                    const SizedBox(height: 24),
-                    _buildGradingKey(),
-                  ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 24),
+                      _buildStatsCards(),
+                      const SizedBox(height: 24),
+                      _buildStudentsTable(),
+                      const SizedBox(height: 24),
+                      _buildGradingKey(),
+                    ],
+                  ),
                 ),
               ),
       ),
@@ -268,6 +270,8 @@ class _GradesEntryViewState extends State<GradesEntryView> {
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         itemCount: _controller.students.length,
         separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade100),
         itemBuilder: (context, index) {
@@ -411,12 +415,13 @@ class _GradesEntryViewState extends State<GradesEntryView> {
             ),
           ),
           // Table Rows
-          Expanded(
-            child: ListView.separated(
-              itemCount: _controller.students.length,
-              separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade100),
-              itemBuilder: (context, index) {
-                final item = _controller.students[index];
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _controller.students.length,
+            separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade100),
+            itemBuilder: (context, index) {
+              final item = _controller.students[index];
                 final grade = _controller.grades[item.student.id];
                 final rating = _controller.getRating(grade);
 
@@ -500,8 +505,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                     ],
                   ),
                 );
-              },
-            ),
+            },
           ),
         ],
       ),

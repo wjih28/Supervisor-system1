@@ -14,7 +14,7 @@ class StudentGradeItem {
 
 /// Controller لإدارة إدخال الدرجات للطلاب
 class GradesController extends ChangeNotifier {
-  List<StudentGradeItem> _students = [];
+  final List<StudentGradeItem> _students = [];
   final Map<int, double?> _grades = {};
   bool _isLoading = true;
 
