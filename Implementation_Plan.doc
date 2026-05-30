@@ -1,0 +1,140 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>خطة تنفيذ: ربط نظام المشرف بقاعدة بيانات Supabase</title>
+<style>
+  body { direction: rtl; font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; padding: 20px; }
+  h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+  h2 { color: #34495e; margin-top: 30px; }
+  h3 { color: #2980b9; }
+  pre { background-color: #f8f9fa; padding: 10px; border-radius: 5px; text-align: left; direction: ltr; }
+  code { background-color: #f8f9fa; padding: 2px 4px; border-radius: 3px; color: #c7254e; font-family: Consolas, monospace; direction: ltr; display: inline-block; }
+  ul { margin-right: 20px; }
+  li { margin-bottom: 5px; }
+</style>
+</head>
+<body>
+
+<h1>خطة تنفيذ: ربط نظام المشرف بقاعدة بيانات Supabase</h1>
+
+<p>هذه الخطة مخصصة للمبرمج للقيام بربط "نظام المشرف" (Supervisor System) بقاعدة بيانات Supabase الفعلية وإزالة الاعتماد على البيانات الوهمية (Mock Data). النظام جاهز تقريباً من ناحية الواجهات ويحتوي على الكود المبدئي الخاص بـ Supabase (موجود كتعليقات)، والمطلوب هو تفعيل هذا الكود ومطابقته مع الجداول الحقيقية المتوفرة على المنصة.</p>
+
+<hr>
+
+<h2>1. التجهيز والتهيئة (Setup & Initialization)</h2>
+
+<h3>1.1. إعداد متغيرات البيئة (<code>.env</code>)</h3>
+<ul>
+  <li>إضافة مفاتيح مشروع Supabase في ملف <code>.env</code> (موجود في الجذر):
+    <pre><code>SUPABASE_URL=رابط_المشروع_هنا
+SUPABASE_ANON_KEY=المفتاح_الخاص_بالمشروع_هنا</code></pre>
+  </li>
+  <li>التأكد من أن ملف <code>pubspec.yaml</code> يحتوي على <code>flutter_dotenv</code> و <code>supabase_flutter</code>.</li>
+</ul>
+
+<h3>1.2. تفعيل التهيئة في <code>lib/main.dart</code></h3>
+<ul>
+  <li>إزالة التعليقات <code>/* ... */</code> حول كود تهيئة <code>Supabase.initialize</code> وتحميل <code>dotenv</code>.</li>
+  <li>إزالة رسالة "يتم تشغيل النظام في وضع النموذج الأولي".</li>
+</ul>
+<p><strong>[تعديل ملف]</strong> <code>lib/main.dart</code></p>
+
+<hr>
+
+<h2>2. تفعيل الاتصال بقاعدة البيانات وتحديث الدوال</h2>
+
+<p>يحتوي ملف <code>lib/services/supabase_service.dart</code> على الدوال الأساسية معتمدة حالياً على <code>MockData</code>. يجب إلغاء تعليق كود Supabase ومطابقته بدقة مع الجداول الفعلية التالية:</p>
+
+<h3>2.1. إعداد خدمة Supabase</h3>
+<ul>
+  <li>إزالة التعليق عن السطر: <code>static final client = Supabase.instance.client;</code></li>
+  <li>إزالة الاستيراد: <code>import '../constants/mock_data.dart';</code></li>
+</ul>
+
+<h3>2.2. مطابقة أسماء الجداول والأعمدة في دوال الخدمة</h3>
+<p>يجب تعديل أكواد Supabase بداخل الدوال لتشير إلى الجداول الحقيقية وأسماء أعمدتها الدقيقة التي تم تصميمها في قاعدة البيانات:</p>
+
+<ul>
+  <li><strong>تسجيل الدخول (<code>loginSupervisor</code>)</strong>:
+    <ul>
+      <li>الجدول: <code>supervisor</code></li>
+      <li>أعمدة البحث: <code>sprvsr_username</code> أو <code>sprvsr_email</code>، ومطابقة <code>sprvsr_password</code>.</li>
+    </ul>
+  </li>
+  <li><strong>جلب المشاريع (<code>getGroupsBySupervisor</code>)</strong>:
+    <ul>
+      <li>الجدول: <code>groups</code></li>
+      <li>شرط البحث: <code>id_sprvsr = supervisorId</code></li>
+    </ul>
+  </li>
+  <li><strong>جلب طلاب المجموعة (<code>getGroupStudents</code>)</strong>:
+    <ul>
+      <li>الجدول: <code>student</code></li>
+      <li>شرط البحث: <code>id_group = groupId</code></li>
+    </ul>
+  </li>
+  <li><strong>التعليقات والملاحظات (<code>getCommentsByGroup</code>, <code>addReviewComment</code>)</strong>:
+    <ul>
+      <li>الجدول: <code>review_comments</code></li>
+      <li>الأعمدة: <code>id_group</code>, <code>id_sprvsr</code>, <code>comment_text</code>, <code>is_resolved</code>.</li>
+    </ul>
+  </li>
+  <li><strong>الملفات المرفوعة (<code>getProjectFiles</code>)</strong>:
+    <ul>
+      <li>الجدول: <code>research_files</code></li>
+      <li>الأعمدة: <code>id_group</code>, <code>file_name</code>, <code>file_url</code>, <code>file_stage</code>.</li>
+    </ul>
+  </li>
+  <li><strong>نظام الدردشة (<code>getSupervisorChats</code>, <code>getChatMessages</code>, <code>sendMessage</code>)</strong>:
+    <ul>
+      <li>جداول الدردشة موجودة وجاهزة وتدعم الوقت الفعلي.</li>
+      <li>جدول <code>chats</code> (يحتوي <code>chat_id</code>, <code>id_group</code>, <code>id_sprvsr</code>, <code>last_message</code>).</li>
+      <li>جدول <code>messages</code> (يحتوي <code>message_id</code>, <code>id_chat</code>, <code>sender_id</code>, <code>sender_role</code>, <code>message_text</code>).</li>
+      <li>يجب تفعيل الـ <code>Stream</code> في تطبيق فلاتر لتحديث الرسائل فور وصولها (<code>client.from('messages').stream(primaryKey: ['message_id']).eq('id_chat', chatId)</code>).</li>
+    </ul>
+  </li>
+</ul>
+<p><strong>[تعديل ملف]</strong> <code>lib/services/supabase_service.dart</code></p>
+
+<hr>
+
+<h2>3. مطابقة النماذج مع قاعدة البيانات (Models Syncing)</h2>
+
+<p>هذه خطوة هامة جداً، النماذج (Models) يجب أن تطابق هيكل الجداول الفعلي تماماً لتجنب مشاكل Null أو Parse Errors.</p>
+
+<ul>
+  <li><strong><code>research_group.dart</code></strong>: يتطابق مع جدول <code>groups</code> (الأعمدة: <code>group_id</code>, <code>group_name</code>, <code>id_sprvsr</code>, <code>group_progress</code>, <code>group_led_id</code>, <code>id_program</code>, <code>current_stage</code>).</li>
+  <li><strong><code>student.dart</code></strong>: يتطابق مع جدول <code>student</code> (الأعمدة: <code>stud_id</code>, <code>stud_name</code>, <code>stud_email</code>, <code>id_group</code>, <code>id_program</code>).</li>
+  <li><strong><code>supervisor.dart</code></strong>: يتطابق مع جدول <code>supervisor</code> (<code>sprvsr_id</code>, <code>sprvsr_name</code>).</li>
+  <li><strong><code>review_comment.dart</code></strong>: يتطابق مع <code>review_comments</code>.</li>
+  <li><strong>مراحل المشروع (<code>project_stages</code>)</strong>: يمكن تتبع التقدم من خلال جداول المراحل المفصلة المتوفرة (مثل <code>first stage</code>, <code>stage2_titles_approval</code>, وغيرها) أو الاعتماد على جدول <code>project_stages</code> و <code>stages statues</code> حسب المتطلبات الدقيقة للواجهة.</li>
+</ul>
+<p><strong>[تعديل ملفات]</strong> <code>lib/models/*.dart</code></p>
+
+<hr>
+
+<h2>4. إزالة البيانات الوهمية (Cleanup)</h2>
+
+<ul>
+  <li>حذف ملف <code>lib/constants/mock_data.dart</code> بالكامل وإزالة أي استيراد له من الشاشات ووحدات التحكم.</li>
+</ul>
+<p><strong>[حذف ملف]</strong> <code>lib/constants/mock_data.dart</code></p>
+
+<hr>
+
+<h2>5. خطة التحقق والاختبار (Verification Plan)</h2>
+
+<p>بعد إنهاء الربط والتأكد من خلو المشروع من أخطاء الـ Compilation:</p>
+<ol>
+  <li><strong>تسجيل الدخول الحقيقي</strong>: تسجيل دخول باستخدام حساب مشرف موجود في جدول <code>supervisor</code>.</li>
+  <li><strong>عرض بيانات حقيقية</strong>: إضافة مجموعة <code>group</code> واحدة على الأقل وربطها بالمشرف في قاعدة البيانات، والتأكد من ظهورها في واجهة لوحة التحكم.</li>
+  <li><strong>تفاعلات الدردشة والتعليقات</strong>:
+    <ul>
+      <li>إرسال رسالة في الدردشة والتأكد من ظهورها تلقائياً بدون الحاجة لتحديث الصفحة (بفضل Real-time Streams).</li>
+      <li>إضافة ملاحظة للمجموعة من واجهة المشرف والتأكد من تسجيلها بجدول <code>review_comments</code> في Supabase.</li>
+    </ul>
+  </li>
+</ol>
+
+</body>
+</html>
