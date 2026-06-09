@@ -132,8 +132,7 @@ class _AddFeedbackViewState extends State<AddFeedbackView> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed:
-                    _controller.isSubmitting ? null : _submitFeedback,
+                onPressed: _controller.isSubmitting ? null : _submitFeedback,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2D62ED),
                   shape: RoundedRectangleBorder(

@@ -31,8 +31,10 @@ class _ProjectsListViewState extends State<ProjectsListView> {
     _controller.addListener(() {
       if (mounted) setState(() {});
     });
-    _controller.loadProjects(
-        supervisorId: widget.supervisorId, isGuest: widget.isGuest).then((_) {
+    _controller
+        .loadProjects(
+            supervisorId: widget.supervisorId, isGuest: widget.isGuest)
+        .then((_) {
       _loadStudents();
     });
   }
@@ -97,8 +99,10 @@ class _ProjectsListViewState extends State<ProjectsListView> {
       itemBuilder: (context, index) {
         final project = _controller.projects[index];
         final students = _groupStudents[project.id] ?? [];
-        final leader = students.firstWhere((s) => s.role == 'قائد الفريق', orElse: () => Student(name: 'غير محدد'));
-        final members = students.where((s) => s.role != 'قائد الفريق').toList();
+        // قائد الفريق يُحدَّد عبر group_led_id في جدول groups
+        final leaderName = project.leaderName ?? 'غير محدد';
+        final members =
+            students.where((s) => s.id != project.leaderId).toList();
 
         return Container(
           padding: const EdgeInsets.all(24),
@@ -132,7 +136,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    leader.name,
+                    leaderName,
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(0xFF4B5563),
@@ -140,7 +144,8 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2D62ED),
                       borderRadius: BorderRadius.circular(8),
@@ -169,7 +174,8 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.people_outline, color: Color(0xFF4B5563), size: 18),
+                  const Icon(Icons.people_outline,
+                      color: Color(0xFF4B5563), size: 18),
                 ],
               ),
               const SizedBox(height: 8),

@@ -10,6 +10,9 @@ class ProjectStage {
   final double? progress;
   final String? status;
 
+  /// هل المرحلة مفعّلة على مستوى البرنامج (العمود stage_isactive في جدول stages)
+  final bool? isActive;
+
   ProjectStage({
     this.id,
     this.groupId,
@@ -21,6 +24,7 @@ class ProjectStage {
     this.dueDate,
     this.progress,
     this.status,
+    this.isActive,
   });
 
   factory ProjectStage.fromJson(Map<String, dynamic> json) {

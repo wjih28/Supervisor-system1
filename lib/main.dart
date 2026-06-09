@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-// import 'package:supabase_flutter/supabase_flutter.dart';
-// import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'views/login_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // تحميل متغيرات البيئة من ملف .env (معطل مؤقتاً للنموذج الأولي)
-  /*
+  // تحميل متغيرات البيئة من ملف .env
   await dotenv.load(fileName: ".env");
 
   // تهيئة Supabase
@@ -20,9 +19,6 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('❌ فشل تهيئة Supabase: $e');
   }
-  */
-  debugPrint('ℹ️ يتم تشغيل النظام في وضع النموذج الأولي (Mock Data Mode)');
-
 
   runApp(const GraduationApp());
 }

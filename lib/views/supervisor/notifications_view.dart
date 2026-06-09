@@ -22,7 +22,8 @@ class NotificationsView extends StatefulWidget {
   State<NotificationsView> createState() => _NotificationsViewState();
 }
 
-class _NotificationsViewState extends State<NotificationsView> with SingleTickerProviderStateMixin {
+class _NotificationsViewState extends State<NotificationsView>
+    with SingleTickerProviderStateMixin {
   final NotificationsController _controller = NotificationsController();
   late TabController _tabController;
 
@@ -41,12 +42,14 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
     if (notification.isRead != true) {
       await _controller.markAsRead(notification.id!, widget.supervisorId);
     }
-    
+
     if (!mounted) return;
 
     // 2. Context-aware navigation based on title keywords
     final title = notification.title.toLowerCase();
-    if (title.contains('ملف') || title.contains('اعتماد') || title.contains('مرحلة')) {
+    if (title.contains('ملف') ||
+        title.contains('اعتماد') ||
+        title.contains('مرحلة')) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -97,8 +100,13 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
               : TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildNotificationsList(_controller.notifications, isDesktop),
-                    _buildNotificationsList(_controller.notifications.where((n) => n.isRead != true).toList(), isDesktop),
+                    _buildNotificationsList(
+                        _controller.notifications, isDesktop),
+                    _buildNotificationsList(
+                        _controller.notifications
+                            .where((n) => n.isRead != true)
+                            .toList(),
+                        isDesktop),
                   ],
                 ),
         ),
@@ -116,7 +124,8 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
 
   Widget _buildHeader(bool isDesktop) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(isDesktop ? 32 : 16, isDesktop ? 32 : 16, isDesktop ? 32 : 16, 16),
+      padding: EdgeInsets.fromLTRB(
+          isDesktop ? 32 : 16, isDesktop ? 32 : 16, isDesktop ? 32 : 16, 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -141,13 +150,15 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
             children: [
               if (isDesktop) ...[
                 OutlinedButton.icon(
-                  onPressed: () => _controller.markAllAsRead(widget.supervisorId),
+                  onPressed: () =>
+                      _controller.markAllAsRead(widget.supervisorId),
                   icon: const Icon(Icons.done_all, size: 18),
                   label: const Text('تحديد الكل كمقروء'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF2D62ED),
                     side: const BorderSide(color: Color(0xFF2D62ED)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -158,12 +169,14 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ] else ...[
                 IconButton(
-                  onPressed: () => _controller.markAllAsRead(widget.supervisorId),
+                  onPressed: () =>
+                      _controller.markAllAsRead(widget.supervisorId),
                   icon: const Icon(Icons.done_all, color: Color(0xFF2D62ED)),
                   tooltip: 'تحديد الكل كمقروء',
                 ),
@@ -204,9 +217,11 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey[300]),
+            Icon(Icons.notifications_off_outlined,
+                size: 80, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            const Text('لا توجد إشعارات حالياً', style: TextStyle(fontSize: 18, color: Color(0xFF718096))),
+            const Text('لا توجد إشعارات حالياً',
+                style: TextStyle(fontSize: 18, color: Color(0xFF718096))),
           ],
         ),
       );
@@ -218,12 +233,12 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
       itemBuilder: (context, index) {
         final notification = notifs[index];
         final isRead = notification.isRead == true;
-        
+
         // Determine icon and colors based on notification title
         IconData icon = Icons.notifications_active;
         Color iconColor = Colors.white;
         Color bgColor = const Color(0xFF2D62ED); // Blue default
-        
+
         if (notification.title.contains('ملف')) {
           icon = Icons.file_present;
           bgColor = const Color(0xFF3B82F6); // Blue
@@ -245,12 +260,21 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: isRead ? Colors.white : const Color(0xFFEFF6FF), // Light blue for unread
+            color: isRead
+                ? Colors.white
+                : const Color(0xFFEFF6FF), // Light blue for unread
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isRead ? const Color(0xFFE2E8F0) : const Color(0xFFBFDBFE)),
-            boxShadow: isRead ? null : [
-              BoxShadow(color: const Color(0xFF3B82F6).withAlpha(15), blurRadius: 10, offset: const Offset(0, 4))
-            ],
+            border: Border.all(
+                color:
+                    isRead ? const Color(0xFFE2E8F0) : const Color(0xFFBFDBFE)),
+            boxShadow: isRead
+                ? null
+                : [
+                    BoxShadow(
+                        color: const Color(0xFF3B82F6).withAlpha(15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4))
+                  ],
           ),
           child: Material(
             color: Colors.transparent,
@@ -265,7 +289,8 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
                     CircleAvatar(
                       backgroundColor: isRead ? Colors.grey[300] : bgColor,
                       radius: 24,
-                      child: Icon(icon, color: isRead ? Colors.grey[600] : iconColor),
+                      child: Icon(icon,
+                          color: isRead ? Colors.grey[600] : iconColor),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -278,7 +303,9 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
                               Text(
                                 notification.title,
                                 style: TextStyle(
-                                  fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                                  fontWeight: isRead
+                                      ? FontWeight.normal
+                                      : FontWeight.bold,
                                   fontSize: 16,
                                   color: const Color(0xFF1F2937),
                                 ),
@@ -287,7 +314,9 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
                                 Container(
                                   width: 8,
                                   height: 8,
-                                  decoration: const BoxDecoration(color: Color(0xFF2D62ED), shape: BoxShape.circle),
+                                  decoration: const BoxDecoration(
+                                      color: Color(0xFF2D62ED),
+                                      shape: BoxShape.circle),
                                 ),
                             ],
                           ),
@@ -295,14 +324,17 @@ class _NotificationsViewState extends State<NotificationsView> with SingleTicker
                           Text(
                             notification.message,
                             style: TextStyle(
-                              color: isRead ? const Color(0xFF6B7280) : const Color(0xFF4B5563),
+                              color: isRead
+                                  ? const Color(0xFF6B7280)
+                                  : const Color(0xFF4B5563),
                               height: 1.5,
                             ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             timeStr,
-                            style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+                            style: const TextStyle(
+                                color: Color(0xFF9CA3AF), fontSize: 12),
                           ),
                         ],
                       ),

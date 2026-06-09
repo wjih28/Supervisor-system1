@@ -26,9 +26,11 @@ class _SettingsViewState extends State<SettingsView> {
   final TextEditingController _departmentController = TextEditingController();
   final TextEditingController _programController = TextEditingController();
   final TextEditingController _employeeIdController = TextEditingController();
-  final TextEditingController _currentPasswordController = TextEditingController();
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -73,7 +75,8 @@ class _SettingsViewState extends State<SettingsView> {
     if (widget.isGuest) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('عرض الضيف: تغيير كلمة المرور غير متاح')),
+          const SnackBar(
+              content: Text('عرض الضيف: تغيير كلمة المرور غير متاح')),
         );
       }
       return;
@@ -128,7 +131,8 @@ class _SettingsViewState extends State<SettingsView> {
                   children: [
                     _buildPageHeader(isDesktop),
                     const SizedBox(height: 32),
-                    _buildSectionHeader(Icons.person_outline, 'المعلومات الشخصية'),
+                    _buildSectionHeader(
+                        Icons.person_outline, 'المعلومات الشخصية'),
                     const SizedBox(height: 24),
                     _buildPersonalInfoSection(isDesktop),
                     const SizedBox(height: 32),
@@ -162,20 +166,27 @@ class _SettingsViewState extends State<SettingsView> {
         children: [
           ElevatedButton.icon(
             onPressed: _saveSettings,
-            icon: const Icon(Icons.save_outlined, size: 18, color: Colors.white),
+            icon:
+                const Icon(Icons.save_outlined, size: 18, color: Colors.white),
             label: const Text('حفظ التغييرات'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2D62ED),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
           ),
           const Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('الإعدادات', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
-              Text('إدارة حسابك وتفضيلات النظام', style: TextStyle(color: Colors.grey, fontSize: 14)),
+              Text('الإعدادات',
+                  style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3748))),
+              Text('إدارة حسابك وتفضيلات النظام',
+                  style: TextStyle(color: Colors.grey, fontSize: 14)),
             ],
           ),
         ],
@@ -184,20 +195,27 @@ class _SettingsViewState extends State<SettingsView> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          const Text('الإعدادات', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
-          const Text('إدارة حسابك وتفضيلات النظام', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const Text('الإعدادات',
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D3748))),
+          const Text('إدارة حسابك وتفضيلات النظام',
+              style: TextStyle(color: Colors.grey, fontSize: 14)),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _saveSettings,
-              icon: const Icon(Icons.save_outlined, size: 18, color: Colors.white),
+              icon: const Icon(Icons.save_outlined,
+                  size: 18, color: Colors.white),
               label: const Text('حفظ التغييرات'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2D62ED),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
@@ -210,7 +228,11 @@ class _SettingsViewState extends State<SettingsView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+        Text(title,
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2D3748))),
         const SizedBox(width: 12),
         Icon(icon, color: const Color(0xFF2D62ED)),
       ],
@@ -243,7 +265,9 @@ class _SettingsViewState extends State<SettingsView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)
+        ],
       ),
       child: Column(
         children: [
@@ -258,19 +282,23 @@ class _SettingsViewState extends State<SettingsView> {
                           onPressed: () {},
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
                           ),
-                          child: const Text('تغيير الصورة', style: TextStyle(color: Color(0xFF4A5568))),
+                          child: const Text('تغيير الصورة',
+                              style: TextStyle(color: Color(0xFF4A5568))),
                         ),
                         const SizedBox(height: 4),
-                        const Text('JPG, PNG أو GIF (الحد الأقصى 2 ميجابايت)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        const Text('JPG, PNG أو GIF (الحد الأقصى 2 ميجابايت)',
+                            style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
                     const SizedBox(width: 24),
                     const CircleAvatar(
                       radius: 40,
                       backgroundColor: Color(0xFFDBEAFE),
-                      child: Icon(Icons.person, size: 40, color: Color(0xFF2D62ED)),
+                      child: Icon(Icons.person,
+                          size: 40, color: Color(0xFF2D62ED)),
                     ),
                   ],
                 )
@@ -279,16 +307,19 @@ class _SettingsViewState extends State<SettingsView> {
                     const CircleAvatar(
                       radius: 40,
                       backgroundColor: Color(0xFFDBEAFE),
-                      child: Icon(Icons.person, size: 40, color: Color(0xFF2D62ED)),
+                      child: Icon(Icons.person,
+                          size: 40, color: Color(0xFF2D62ED)),
                     ),
                     const SizedBox(height: 16),
                     OutlinedButton(
                       onPressed: () {},
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.grey.shade300),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('تغيير الصورة', style: TextStyle(color: Color(0xFF4A5568))),
+                      child: const Text('تغيير الصورة',
+                          style: TextStyle(color: Color(0xFF4A5568))),
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -300,7 +331,8 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
           const SizedBox(height: 32),
           _buildResponsiveRow(
-            _buildTextField('البريد الإلكتروني', _emailController, enabled: false),
+            _buildTextField('البريد الإلكتروني', _emailController,
+                enabled: false),
             _buildTextField('الاسم الكامل', _nameController, enabled: false),
             isDesktop,
           ),
@@ -312,7 +344,8 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           const SizedBox(height: 20),
           _buildResponsiveRow(
-            _buildTextField('الرقم الوظيفي', _employeeIdController, enabled: false),
+            _buildTextField('الرقم الوظيفي', _employeeIdController,
+                enabled: false),
             _buildTextField('البرنامج', _programController, enabled: false),
             isDesktop,
           ),
@@ -327,7 +360,9 @@ class _SettingsViewState extends State<SettingsView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)
+        ],
       ),
       child: Column(
         children: [
@@ -335,21 +370,24 @@ class _SettingsViewState extends State<SettingsView> {
             'إشعارات البريد الإلكتروني',
             'استلام إشعارات عبر البريد الإلكتروني',
             _controller.settings?.emailNotifications ?? true,
-            (val) => setState(() => _controller.updateSettings(_controller.settings?.copyWith(emailNotifications: val))),
+            (val) => setState(() => _controller.updateSettings(
+                _controller.settings?.copyWith(emailNotifications: val))),
           ),
           const Divider(height: 32),
           _buildSwitchTile(
             'الإشعارات الفورية',
             'استلام إشعارات فورية على الجهاز',
             _controller.settings?.pushNotifications ?? true,
-            (val) => setState(() => _controller.updateSettings(_controller.settings?.copyWith(pushNotifications: val))),
+            (val) => setState(() => _controller.updateSettings(
+                _controller.settings?.copyWith(pushNotifications: val))),
           ),
           const Divider(height: 32),
           _buildSwitchTile(
             'التقارير الأسبوعية',
             'استلام ملخص أسبوعي لحالة الأبحاث',
             _controller.settings?.weeklyReports ?? false,
-            (val) => setState(() => _controller.updateSettings(_controller.settings?.copyWith(weeklyReports: val))),
+            (val) => setState(() => _controller.updateSettings(
+                _controller.settings?.copyWith(weeklyReports: val))),
           ),
         ],
       ),
@@ -362,25 +400,33 @@ class _SettingsViewState extends State<SettingsView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _buildTextField('كلمة المرور الحالية', _currentPasswordController, isPassword: true, hintText: 'أدخل كلمة المرور الحالية'),
+          _buildTextField('كلمة المرور الحالية', _currentPasswordController,
+              isPassword: true, hintText: 'أدخل كلمة المرور الحالية'),
           const SizedBox(height: 20),
-          _buildTextField('كلمة المرور الجديدة', _newPasswordController, isPassword: true, hintText: 'أدخل كلمة المرور الجديدة'),
+          _buildTextField('كلمة المرور الجديدة', _newPasswordController,
+              isPassword: true, hintText: 'أدخل كلمة المرور الجديدة'),
           const SizedBox(height: 20),
-          _buildTextField('تأكيد كلمة المرور الجديدة', _confirmPasswordController, isPassword: true, hintText: 'أعد إدخال كلمة المرور الجديدة'),
+          _buildTextField(
+              'تأكيد كلمة المرور الجديدة', _confirmPasswordController,
+              isPassword: true, hintText: 'أعد إدخال كلمة المرور الجديدة'),
           const SizedBox(height: 24),
           OutlinedButton(
             onPressed: _updatePassword,
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Color(0xFF2D62ED)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('تحديث كلمة المرور', style: TextStyle(color: Color(0xFF2D62ED))),
+            child: const Text('تحديث كلمة المرور',
+                style: TextStyle(color: Color(0xFF2D62ED))),
           ),
         ],
       ),
@@ -393,20 +439,27 @@ class _SettingsViewState extends State<SettingsView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)
+        ],
       ),
       child: Column(
         children: [
-          _buildDropdownField('اللغة', ['العربية', 'English'], _controller.settings?.language ?? 'العربية', (val) {
+          _buildDropdownField('اللغة', ['العربية', 'English'],
+              _controller.settings?.language ?? 'العربية', (val) {
             if (val != null) {
-              setState(() => _controller.updateSettings(_controller.settings?.copyWith(language: val)));
+              setState(() => _controller.updateSettings(
+                  _controller.settings?.copyWith(language: val)));
             }
           }),
           const SizedBox(height: 24),
-          _buildDropdownField('المنطقة الزمنية', ['توقيت عدن (GMT+3)', 'توقيت مكة (GMT+3)', 'توقيت دبي (GMT+4)'],
+          _buildDropdownField(
+              'المنطقة الزمنية',
+              ['توقيت عدن (GMT+3)', 'توقيت مكة (GMT+3)', 'توقيت دبي (GMT+4)'],
               _controller.settings?.timezone ?? 'توقيت عدن (GMT+3)', (val) {
             if (val != null) {
-              setState(() => _controller.updateSettings(_controller.settings?.copyWith(timezone: val)));
+              setState(() => _controller.updateSettings(
+                  _controller.settings?.copyWith(timezone: val)));
             }
           }),
         ],
@@ -420,7 +473,9 @@ class _SettingsViewState extends State<SettingsView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)
+        ],
       ),
       child: Column(
         children: [
@@ -444,18 +499,25 @@ class _SettingsViewState extends State<SettingsView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A5568))),
+        Text(value,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Color(0xFF4A5568))),
         const SizedBox(width: 8),
         Text(label, style: const TextStyle(color: Colors.grey)),
       ],
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool enabled = true, bool isPassword = false, String? hintText}) {
+  Widget _buildTextField(String label, TextEditingController controller,
+      {bool enabled = true, bool isPassword = false, String? hintText}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: Color(0xFF4A5568), fontWeight: FontWeight.bold)),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF4A5568),
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -467,22 +529,36 @@ class _SettingsViewState extends State<SettingsView> {
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
             filled: !enabled || true,
             fillColor: enabled ? Colors.white : const Color(0xFFF7FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade200)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade200)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF2D62ED))),
-            disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade100)),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade200)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade200)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF2D62ED))),
+            disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade100)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDropdownField(String label, List<String> options, String value, Function(String?) onChanged) {
+  Widget _buildDropdownField(String label, List<String> options, String value,
+      Function(String?) onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: Color(0xFF4A5568), fontWeight: FontWeight.bold)),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF4A5568),
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -499,7 +575,8 @@ class _SettingsViewState extends State<SettingsView> {
               items: options.map((String val) {
                 return DropdownMenuItem<String>(
                   value: val,
-                  child: Text(val, style: const TextStyle(color: Color(0xFF4A5568))),
+                  child: Text(val,
+                      style: const TextStyle(color: Color(0xFF4A5568))),
                 );
               }).toList(),
               onChanged: onChanged,
@@ -510,7 +587,8 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildSwitchTile(String title, String subtitle, bool value, Function(bool) onChanged) {
+  Widget _buildSwitchTile(
+      String title, String subtitle, bool value, Function(bool) onChanged) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -518,7 +596,8 @@ class _SettingsViewState extends State<SettingsView> {
           value: value,
           onChanged: onChanged,
           activeThumbColor: Colors.white,
-          activeTrackColor: const Color(0xFF1E1E1E), // Dark color like in screenshot
+          activeTrackColor:
+              const Color(0xFF1E1E1E), // Dark color like in screenshot
           inactiveThumbColor: Colors.white,
           inactiveTrackColor: Colors.grey.shade300,
         ),
@@ -526,9 +605,14 @@ class _SettingsViewState extends State<SettingsView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3748))),
               const SizedBox(height: 4),
-              Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              Text(subtitle,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
             ],
           ),
         ),

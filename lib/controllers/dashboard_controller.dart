@@ -7,6 +7,7 @@ class DashboardController extends ChangeNotifier {
   int _selectedIndex = 0;
   bool _isLoading = true;
   List<ResearchGroup> _groups = [];
+  final Map<int, List<ProjectFile>> _filesByGroup = {};
   int _totalProjects = 0;
   String _supervisorName = '';
   String _departmentName = 'إدارة الأعمال';
@@ -20,6 +21,9 @@ class DashboardController extends ChangeNotifier {
   String get supervisorName => _supervisorName;
   String get departmentName => _departmentName;
   String get programName => _programName;
+
+  /// ملفات مجموعة معينة (تُحمَّل مع لوحة التحكم)
+  List<ProjectFile> filesForGroup(int groupId) => _filesByGroup[groupId] ?? [];
 
   /// بيانات المشرف الضيف
   Supervisor get guestSupervisor => Supervisor(
@@ -39,24 +43,50 @@ class DashboardController extends ChangeNotifier {
   }
 
   /// تحميل البيانات
-  Future<void> loadData({Supervisor? supervisor, bool isGuest = false}) async {
+  Future<void> loadData({
+    Supervisor? supervisor,
+    int? supervisorId,
+    String? supervisorName,
+    bool isGuest = false,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final supervisorId = supervisor?.id ?? 1;
+      // معرّف المشرف الفعلي: من الكائن أو الـ id المُمرّر (لا fallback صامت يخفي الخطأ)
+      final effectiveId = supervisor?.id ?? supervisorId ?? (isGuest ? 0 : null);
 
-      // جلب المجموعات من الخدمة (التي تم استبدالها ببيانات وهمية)
-      _groups = await SupabaseService.getGroupsBySupervisor(supervisorId);
+      if (effectiveId == null) {
+        // لا يوجد معرّف مشرف صالح — لا تُحمّل بيانات مشرف عشوائي
+        _groups = [];
+        _totalProjects = 0;
+        _filesByGroup.clear();
+        _supervisorName = supervisorName ?? 'المشرف';
+        return;
+      }
+
+      // جلب المجموعات من الخدمة
+      _groups = await SupabaseService.getGroupsBySupervisor(effectiveId);
       _totalProjects = _groups.length;
 
+      // جلب ملفات كل مجموعة لقسم "الملفات الأخيرة"
+      _filesByGroup.clear();
+      for (final group in _groups) {
+        if (group.id != null) {
+          _filesByGroup[group.id!] =
+              await SupabaseService.getGroupFiles(group.id!);
+        }
+      }
+
       // جلب بيانات المشرف
-      final supervisorData = await SupabaseService.getSupervisorById(supervisorId);
-      _supervisorName = supervisorData?.name ?? (isGuest ? 'ضيف العرض' : 'المشرف');
-      
+      final supervisorData =
+          await SupabaseService.getSupervisorById(effectiveId);
+      _supervisorName = supervisorData?.name ??
+          supervisorName ??
+          (isGuest ? 'ضيف العرض' : 'المشرف');
+
       _departmentName = 'إدارة الأعمال';
       _programName = 'إدارة أعمال دولية';
-      
     } catch (e) {
       debugPrint('خطأ في تحميل البيانات: $e');
     } finally {
@@ -64,5 +94,4 @@ class DashboardController extends ChangeNotifier {
       notifyListeners();
     }
   }
-
 }

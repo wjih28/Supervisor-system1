@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../controllers/dashboard_controller.dart';
 import '../models/models.dart';
 import 'widgets/desktop_layout.dart';
+import 'supervisor/project_details_view.dart';
+import 'supervisor/projects_list_view.dart';
 
 class DashboardView extends StatefulWidget {
   final Supervisor? supervisor;
+  final int? supervisorId;
+  final String? supervisorName;
   final bool isGuest;
 
-  const DashboardView({super.key, this.supervisor, this.isGuest = false});
+  const DashboardView({
+    super.key,
+    this.supervisor,
+    this.supervisorId,
+    this.supervisorName,
+    this.isGuest = false,
+  });
 
   @override
   State<DashboardView> createState() => _DashboardViewState();
@@ -16,7 +27,6 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView> {
   final DashboardController _controller = DashboardController();
 
-
   @override
   void initState() {
     super.initState();
@@ -24,7 +34,10 @@ class _DashboardViewState extends State<DashboardView> {
       if (mounted) setState(() {});
     });
     _controller.loadData(
-        supervisor: widget.supervisor, isGuest: widget.isGuest);
+        supervisor: widget.supervisor,
+        supervisorId: widget.supervisorId,
+        supervisorName: widget.supervisorName,
+        isGuest: widget.isGuest);
   }
 
   @override
@@ -40,15 +53,13 @@ class _DashboardViewState extends State<DashboardView> {
 
     return DesktopLayout(
       selectedIndex: 0,
-      supervisorId: widget.supervisor?.id,
+      supervisorId: widget.supervisor?.id ?? widget.supervisorId,
       supervisor: widget.supervisor,
       isGuest: widget.isGuest,
       supervisorName: _controller.supervisorName,
       child: isMobile ? _buildMobileLayout() : _buildDesktopContent(),
     );
   }
-
-
 
   Widget _buildMobileLayout() {
     return SingleChildScrollView(
@@ -92,6 +103,7 @@ class _DashboardViewState extends State<DashboardView> {
             value: _controller.totalProjects.toString(),
             color: const Color(0xFF2D62ED),
             isCount: true,
+            onTap: _openProjectsList,
           ),
           const SizedBox(height: 32),
 
@@ -141,85 +153,101 @@ class _DashboardViewState extends State<DashboardView> {
     final progress = group.progress ?? 0;
     final isDelayed = progress < 40;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDelayed ? const Color(0xFFFEF2F2) : Colors.white,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => _openProjectDetails(group),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDelayed ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  group.name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (isDelayed)
-                const Icon(Icons.error, color: Colors.red, size: 20),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0E7FF),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'قائد الفريق',
-                  style: TextStyle(
-                    color: Color(0xFF4338CA),
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  group.description ?? 'غير محدد',
-                  style: const TextStyle(color: Color(0xFF4B5563), fontSize: 13),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('نسبة الإنجاز', style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
-              Text('${progress.toInt()}%', style: TextStyle(color: isDelayed ? Colors.red : const Color(0xFF2D62ED), fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress / 100,
-              backgroundColor: const Color(0xFFE5E7EB),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isDelayed ? Colors.red : const Color(0xFF2D62ED),
-              ),
-              minHeight: 8,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDelayed ? const Color(0xFFFEF2F2) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color:
+                  isDelayed ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0),
             ),
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      group.name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F2937),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isDelayed)
+                    const Icon(Icons.error, color: Colors.red, size: 20),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E7FF),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'قائد الفريق',
+                      style: TextStyle(
+                        color: Color(0xFF4338CA),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      group.leaderName ?? 'غير محدد',
+                      style: const TextStyle(
+                          color: Color(0xFF4B5563), fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('نسبة الإنجاز',
+                      style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
+                  Text('${progress.toInt()}%',
+                      style: TextStyle(
+                          color:
+                              isDelayed ? Colors.red : const Color(0xFF2D62ED),
+                          fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress / 100,
+                  backgroundColor: const Color(0xFFE5E7EB),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isDelayed ? Colors.red : const Color(0xFF2D62ED),
+                  ),
+                  minHeight: 8,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -239,17 +267,7 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Widget _buildMobileRecentFileCard(ResearchGroup group) {
-    final List<String> mockFiles = [
-      'المرحلة الأولى - اختيار عنوان البحث.pdf',
-      'المرحلة الثانية - إنجاز الخطة.pdf'
-    ];
-    if (group.id == 2) {
-      mockFiles.clear();
-      mockFiles.addAll([
-        'المرحلة الرابعة - إنجاز الدراسات الميدانية.pdf',
-        'المرحلة الخامسة - إنجاز مشروع البحث.pdf',
-      ]);
-    }
+    final files = _controller.filesForGroup(group.id ?? -1);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -272,25 +290,39 @@ class _DashboardViewState extends State<DashboardView> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 12),
-          ...mockFiles.map((file) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.picture_as_pdf, color: Colors.red, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        file,
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF4B5563)),
-                        overflow: TextOverflow.ellipsis,
+          if (files.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('لا توجد ملفات مرفقة',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF))),
+            ),
+          ...files.map((file) => InkWell(
+                onTap: () => _openFile(file.fileUrl),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.picture_as_pdf,
+                          color: Colors.red, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          file.fileName,
+                          style: const TextStyle(
+                              fontSize: 13, color: Color(0xFF4B5563)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                      const Icon(Icons.download,
+                          color: Color(0xFF2D62ED), size: 16),
+                    ],
+                  ),
                 ),
               )),
           const SizedBox(height: 4),
@@ -348,14 +380,15 @@ class _DashboardViewState extends State<DashboardView> {
                   const SizedBox(height: 8),
                   Text(
                     'مرحباً بك د. ${_controller.supervisorName}',
-                    style: const TextStyle(fontSize: 16, color: Color(0xFF718096)),
+                    style:
+                        const TextStyle(fontSize: 16, color: Color(0xFF718096)),
                   ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 32),
-          
+
           // Stats Row
           Row(
             children: [
@@ -381,12 +414,13 @@ class _DashboardViewState extends State<DashboardView> {
                   value: _controller.totalProjects.toString(),
                   color: const Color(0xFF2D62ED), // Blue
                   isCount: true,
+                  onTap: _openProjectsList,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 48),
-          
+
           // Progress Section
           const Text(
             'نسبة إنجاز الأبحاث',
@@ -398,9 +432,9 @@ class _DashboardViewState extends State<DashboardView> {
           ),
           const SizedBox(height: 24),
           _buildProgressSection(),
-          
+
           const SizedBox(height: 48),
-          
+
           // Recent Files Section
           const Text(
             'الملفات الأخيرة التي تم إرفاقها',
@@ -422,8 +456,9 @@ class _DashboardViewState extends State<DashboardView> {
     required String value,
     required Color color,
     bool isCount = false,
+    VoidCallback? onTap,
   }) {
-    return Container(
+    final card = Container(
       constraints: const BoxConstraints(minHeight: 140),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -467,6 +502,18 @@ class _DashboardViewState extends State<DashboardView> {
         ],
       ),
     );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: card,
+      ),
+    );
   }
 
   Widget _buildProgressSection() {
@@ -491,90 +538,107 @@ class _DashboardViewState extends State<DashboardView> {
     final progress = group.progress ?? 0;
     // Mocking logic to match UI colors: < 40 is delayed/red
     final isDelayed = progress < 40;
-    
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDelayed ? const Color(0xFFFEF2F2) : Colors.white,
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => _openProjectDetails(group),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDelayed ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  group.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (isDelayed)
-                const Icon(Icons.error, color: Colors.red),
-            ],
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDelayed ? const Color(0xFFFEF2F2) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color:
+                  isDelayed ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0),
+            ),
           ),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0E7FF),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'قائد الفريق',
-                  style: TextStyle(
-                    color: Color(0xFF4338CA),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  group.description ?? 'غير محدد',
-                  style: const TextStyle(color: Color(0xFF4B5563), fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('نسبة الإنجاز', style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
-                  Text('${progress.toInt()}%', style: TextStyle(color: isDelayed ? Colors.red : const Color(0xFF2D62ED), fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: Text(
+                      group.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F2937),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isDelayed) const Icon(Icons.error, color: Colors.red),
                 ],
               ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress / 100,
-                  backgroundColor: const Color(0xFFE5E7EB),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isDelayed ? Colors.red : const Color(0xFF2D62ED),
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E7FF),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'قائد الفريق',
+                      style: TextStyle(
+                        color: Color(0xFF4338CA),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                  minHeight: 8,
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      group.leaderName ?? 'غير محدد',
+                      style: const TextStyle(
+                          color: Color(0xFF4B5563), fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('نسبة الإنجاز',
+                          style: TextStyle(
+                              color: Color(0xFF6B7280), fontSize: 12)),
+                      Text('${progress.toInt()}%',
+                          style: TextStyle(
+                              color: isDelayed
+                                  ? Colors.red
+                                  : const Color(0xFF2D62ED),
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress / 100,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDelayed ? Colors.red : const Color(0xFF2D62ED),
+                      ),
+                      minHeight: 8,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -599,18 +663,7 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Widget _buildRecentFileCard(ResearchGroup group) {
-    // Mock files for UI purposes
-    final List<String> mockFiles = [
-      'المرحلة الأولى - اختيار عنوان البحث.pdf',
-      'المرحلة الثانية - إنجاز الخطة.pdf'
-    ];
-    if (group.id == 2) {
-      mockFiles.clear();
-      mockFiles.addAll([
-        'المرحلة الرابعة - إنجاز الدراسات الميدانية.pdf',
-        'المرحلة الخامسة - إنجاز مشروع البحث.pdf',
-      ]);
-    }
+    final files = _controller.filesForGroup(group.id ?? -1);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -634,36 +687,50 @@ class _DashboardViewState extends State<DashboardView> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: mockFiles.length,
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.picture_as_pdf, color: Colors.red, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          mockFiles[index],
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF4B5563),
+            child: files.isEmpty
+                ? const Center(
+                    child: Text('لا توجد ملفات مرفقة',
+                        style:
+                            TextStyle(fontSize: 14, color: Color(0xFF9CA3AF))),
+                  )
+                : ListView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: files.length,
+                    itemBuilder: (context, index) {
+                      final file = files[index];
+                      return InkWell(
+                        onTap: () => _openFile(file.fileUrl),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.picture_as_pdf,
+                                  color: Colors.red, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  file.fileName,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF4B5563),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Icon(Icons.download,
+                                  color: Color(0xFF2D62ED), size: 18),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           SizedBox(
             width: double.infinity,
@@ -690,25 +757,67 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  void _showAllFilesDialog(BuildContext context, ResearchGroup group) {
-    final List<Map<String, String>> allMockFiles = group.id == 2 ? [
-      {'name': 'المرحلة الرابعة - إنجاز الدراسات الميدانية.pdf', 'date': '2023-10-15', 'size': '2.4 MB'},
-      {'name': 'المرحلة الخامسة - إنجاز مشروع البحث.pdf', 'date': '2023-10-18', 'size': '5.1 MB'},
-      {'name': 'المرحلة السادسة - مناقشة البحث.pdf', 'date': '2023-11-01', 'size': '1.2 MB'},
-    ] : [
-      {'name': 'المرحلة الأولى - اختيار عنوان البحث.pdf', 'date': '2023-09-01', 'size': '1.5 MB'},
-      {'name': 'المرحلة الثانية - إنجاز الخطة.pdf', 'date': '2023-09-15', 'size': '3.2 MB'},
-      {'name': 'المرحلة الثالثة - جمع المراجع.pdf', 'date': '2023-10-01', 'size': '4.8 MB'},
-      {'name': 'مسودة البحث الأولى.pdf', 'date': '2023-10-10', 'size': '12.5 MB'},
-    ];
+  /// فتح تفاصيل المشروع عند النقر على بطاقة مجموعة
+  void _openProjectDetails(ResearchGroup group) {
+    if (group.id == null) return;
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => ProjectDetailsView(
+          projectId: group.id!,
+          supervisorId: widget.supervisor?.id ?? widget.supervisorId ?? 0,
+          supervisorName: _controller.supervisorName,
+          isGuest: widget.isGuest,
+        ),
+        transitionDuration: Duration.zero,
+      ),
+    );
+  }
 
+  /// فتح قائمة المجموعات عند النقر على بطاقة عدد الأبحاث
+  void _openProjectsList() {
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => ProjectsListView(
+          supervisorId: widget.supervisor?.id ?? widget.supervisorId ?? 0,
+          supervisorName: _controller.supervisorName,
+          isGuest: widget.isGuest,
+        ),
+        transitionDuration: Duration.zero,
+      ),
+    );
+  }
+
+  Future<void> _openFile(String? url) async {
+    if (url == null || url.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('لا يوجد رابط للملف')),
+        );
+      }
+      return;
+    }
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح الملف')),
+        );
+      }
+    }
+  }
+
+  void _showAllFilesDialog(BuildContext context, ResearchGroup group) {
+    final files = _controller.filesForGroup(group.id ?? -1);
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
             width: isMobile ? double.infinity : 600,
             constraints: BoxConstraints(
@@ -743,89 +852,81 @@ class _DashboardViewState extends State<DashboardView> {
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 16),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: allMockFiles.length,
-                    itemBuilder: (context, index) {
-                      final file = allMockFiles[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.picture_as_pdf, color: Colors.red, size: 36),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    file['name']!,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1F2937),
-                                      fontSize: 14,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                if (files.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text('لا توجد ملفات مرفقة',
+                          style: TextStyle(
+                              fontSize: 14, color: Color(0xFF9CA3AF))),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: files.length,
+                      itemBuilder: (context, index) {
+                        final file = files[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.picture_as_pdf,
+                                  color: Colors.red, size: 36),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  file.fileName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1F2937),
+                                    fontSize: 14,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'تاريخ الإضافة: ${file['date']} • الحجم: ${file['size']}',
-                                    style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            isMobile 
-                              ? IconButton(
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('تم تنزيل الملف بنجاح'),
-                                        backgroundColor: Colors.green,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.download, color: Color(0xFF2D62ED)),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: const Color(0xFFE0E7FF),
-                                  ),
-                                )
-                              : ElevatedButton.icon(
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('تم تنزيل الملف بنجاح'),
-                                        backgroundColor: Colors.green,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.download, size: 18),
-                                  label: const Text('تنزيل'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2D62ED),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                          ],
-                        ),
-                      );
-                    },
+                              ),
+                              const SizedBox(width: 8),
+                              isMobile
+                                  ? IconButton(
+                                      onPressed: () => _openFile(file.fileUrl),
+                                      icon: const Icon(Icons.download,
+                                          color: Color(0xFF2D62ED)),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFFE0E7FF),
+                                      ),
+                                    )
+                                  : ElevatedButton.icon(
+                                      onPressed: () => _openFile(file.fileUrl),
+                                      icon:
+                                          const Icon(Icons.download, size: 18),
+                                      label: const Text('تنزيل'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF2D62ED),
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 10),
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
               ],
             ),
           ),

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' hide TextDirection;
+import 'package:url_launcher/url_launcher.dart';
+import '../../controllers/supervisor/stage_details_controller.dart';
 import '../../models/models.dart';
 import '../widgets/desktop_layout.dart';
 import 'project_details_view.dart';
@@ -9,7 +12,7 @@ class StageDetailsView extends StatefulWidget {
   final int supervisorId;
   final String supervisorName;
   final bool isGuest;
-  final int stageIndex; // 1 for Stage 1, 2 for Stage 2, etc.
+  final int stageIndex; // ترتيب المرحلة في القائمة (احتياطي إن خلا الاسم من رقم)
 
   const StageDetailsView({
     super.key,
@@ -26,44 +29,165 @@ class StageDetailsView extends StatefulWidget {
 }
 
 class _StageDetailsViewState extends State<StageDetailsView> {
-  final List<Map<String, String>> _stage2Reqs = [
-    {'title': 'المقدمة', 'status': 'approved'},
-    {'title': 'مشكلة الدراسة', 'status': 'approved'},
-    {'title': 'أهمية الدراسة', 'status': 'needs_edit'},
-    {'title': 'أهداف الدراسة', 'status': 'approved'},
-    {'title': 'فرضيات الدراسة', 'status': 'needs_edit'},
-  ];
+  late final StageDetailsController _controller;
+  late final int _stageNumber;
+  bool _seeded = false;
+
+  // حقول المرحلة 3 القابلة للتحرير
+  final _s3PercentCtrl = TextEditingController();
+  final _s3NoteCtrl = TextEditingController();
+  DateTime? _s3Date;
+
+  // حقول المرحلة 4 القابلة للتحرير
+  final _s4NotesCtrl = TextEditingController();
+
+  // ملاحظات المرحلة 5 (ملاحظة لكل قسم — title_id)
+  final Map<int, TextEditingController> _s5Notes = {};
+
+  // اعتماد عناصر المرحلة 2 (حالة عرض محلية — لا يوجد عمود اعتماد لكل عنصر)
+  final Set<int> _approvedTitles = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _stageNumber = _parseStageNumber(widget.stage.name);
+    _controller = StageDetailsController(
+      groupId: widget.projectId,
+      stageNumber: _stageNumber,
+      stageId: widget.stage.id,
+      supervisorId: widget.supervisorId,
+    );
+    _controller.addListener(_onControllerChange);
+    _controller.load();
+    _controller.startRealtime();
+  }
+
+  void _onControllerChange() {
+    if (!mounted) return;
+    if (!_controller.isLoading && !_seeded) {
+      _seedFields();
+      _seeded = true;
+    }
+    setState(() {});
+  }
+
+  void _seedFields() {
+    final s3 = _controller.stage3;
+    if (s3 != null) {
+      _s3Date = s3.discussionDate;
+      if (s3.discussionPercent != null) {
+        _s3PercentCtrl.text = _fmtPercent(s3.discussionPercent!);
+      }
+      _s3NoteCtrl.text = s3.supervisorNote ?? '';
+    }
+    final s4 = _controller.stage4;
+    if (s4 != null) _s4NotesCtrl.text = s4.supervisorNotes ?? '';
+    for (final sec in _controller.stage5Sections) {
+      _s5Notes.putIfAbsent(
+          sec.titleId, () => TextEditingController(text: sec.supervisorNote ?? ''));
+    }
+    if (_controller.stage2?.stageApproval == true) {
+      _approvedTitles
+          .addAll(List.generate(_controller.stage2Titles.length, (i) => i));
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onControllerChange);
+    _controller.dispose();
+    _s3PercentCtrl.dispose();
+    _s3NoteCtrl.dispose();
+    _s4NotesCtrl.dispose();
+    for (final c in _s5Notes.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  int _parseStageNumber(String name) {
+    final match = RegExp(r'\d+').firstMatch(name);
+    if (match != null) {
+      final n = int.tryParse(match.group(0)!);
+      if (n != null) return n;
+    }
+    return widget.stageIndex;
+  }
+
+  String _fmtPercent(double v) =>
+      v == v.roundToDouble() ? v.round().toString() : v.toString();
+
+  /// تنفيذ إجراء حفظ وإظهار رسالة نتيجة موحّدة.
+  Future<void> _handle(
+      Future<bool> Function() action, String successMsg) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await action();
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(ok ? successMsg : 'حدث خطأ أثناء الحفظ'),
+        backgroundColor: ok ? const Color(0xFF10B981) : Colors.red,
+      ),
+    );
+  }
+
+  Future<void> _openFile(String? url) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (url == null || url.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('لا يوجد رابط ملف للفتح')),
+      );
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null || (!uri.isScheme('http') && !uri.isScheme('https'))) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('رابط الملف غير صالح')),
+      );
+      return;
+    }
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        messenger
+            .showSnackBar(const SnackBar(content: Text('لا يمكن فتح الرابط حالياً')));
+      }
+    } catch (_) {
+      messenger
+          .showSnackBar(const SnackBar(content: Text('حدث خطأ أثناء فتح الملف')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
 
-    Widget content = SingleChildScrollView(
-      padding: EdgeInsets.all(isMobile ? 16 : 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildBackButton(context),
-          const SizedBox(height: 24),
-          Text(
-            widget.stage.name,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+    Widget content = _controller.isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+            padding: EdgeInsets.all(isMobile ? 16 : 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildBackButton(context),
+                const SizedBox(height: 24),
+                Text(
+                  widget.stage.name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                _buildStageContent(),
+              ],
             ),
-          ),
-          const SizedBox(height: 32),
-          if (widget.stageIndex == 1) _buildStage1Content(),
-          if (widget.stageIndex == 2) _buildStage2Content(),
-          if (widget.stageIndex == 3) _buildStage3Content(),
-          if (widget.stageIndex == 4) _buildStage4Content(),
-        ],
-      ),
-    );
+          );
 
     return DesktopLayout(
-      selectedIndex: 1, // Keep Sidebar selected on "إدارة المجموعات"
+      selectedIndex: 1, // إبقاء "إدارة المجموعات" محدّداً في الشريط الجانبي
       supervisorId: widget.supervisorId,
       supervisorName: widget.supervisorName,
       isGuest: widget.isGuest,
@@ -104,6 +228,41 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     );
   }
 
+  /// اختيار محتوى المرحلة حسب رقمها الفعلي (لا حسب موضعها في القائمة).
+  Widget _buildStageContent() {
+    switch (_stageNumber) {
+      case 1:
+        return _buildStage1Content();
+      case 2:
+        return _buildStage2Content();
+      case 3:
+        return _buildStage3Content();
+      case 4:
+        return _buildStage4Content();
+      case 5:
+        return _buildStage5Content();
+      default:
+        return _buildUnknownStageContent();
+    }
+  }
+
+  Widget _buildUnknownStageContent() {
+    return _buildCard(
+      title: 'محتوى المرحلة',
+      icon: Icons.info_outline,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text(
+            'لا يوجد محتوى مخصص لهذه المرحلة بعد.',
+            style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ===================== المرحلة 1 =====================
   Widget _buildStage1Content() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,6 +276,183 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     );
   }
 
+  Widget _buildTeamMembersCard() {
+    final students = _controller.students;
+    final leaderId = _controller.leaderId;
+
+    return _buildCard(
+      title: 'أعضاء الفريق',
+      icon: Icons.people_outline,
+      child: students.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('لا يوجد أعضاء مسجّلون لهذه المجموعة',
+                  style: TextStyle(color: Color(0xFF6B7280))),
+            )
+          : GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: MediaQuery.of(context).size.width < 600 ? 1 : 2,
+                childAspectRatio:
+                    MediaQuery.of(context).size.width < 600 ? 8 : 6,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemCount: students.length,
+              itemBuilder: (context, index) {
+                final s = students[index];
+                final isLeader = s.id != null && s.id == leaderId;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          s.name,
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4B5563)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (isLeader)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: const Color(0xFF2D62ED),
+                              borderRadius: BorderRadius.circular(16)),
+                          child: const Text('قائد الفريق',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildResearchDetailsCard() {
+    final s1 = _controller.stage1;
+    final title = (s1?.researchTitle?.trim().isNotEmpty == true)
+        ? s1!.researchTitle!.trim()
+        : (_controller.group?.name ?? '');
+    final desc = (s1?.researchDescription?.trim().isNotEmpty == true)
+        ? s1!.researchDescription!.trim()
+        : (_controller.group?.description ?? 'لا يوجد وصف');
+
+    return _buildCard(
+      title: 'تفاصيل البحث',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('عنوان البحث',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: title,
+            readOnly: true,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF9FAFB),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('وصف البحث',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: desc,
+            readOnly: true,
+            maxLines: 4,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF9FAFB),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApprovalCard() {
+    final approved = _controller.stage1?.supervisorApproval;
+    return _buildCard(
+      title: 'اعتماد البحث',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (approved != null) ...[
+            _buildStatusChip(
+              approved ? 'تم اعتماد البحث' : 'تم رفض البحث',
+              approved,
+            ),
+            const SizedBox(height: 16),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _controller.isSaving
+                      ? null
+                      : () => _handle(() => _controller.setStage1Approval(false),
+                          'تم رفض البحث'),
+                  icon: const Icon(Icons.cancel_outlined, color: Colors.white),
+                  label: const Text('رفض البحث',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _controller.isSaving
+                      ? null
+                      : () => _handle(() => _controller.setStage1Approval(true),
+                          'تم اعتماد البحث'),
+                  icon: const Icon(Icons.check_circle_outline,
+                      color: Colors.white),
+                  label: const Text('اعتماد البحث',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===================== المرحلة 2 =====================
   Widget _buildStage2Content() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,6 +481,189 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     );
   }
 
+  Widget _buildStageSummaryCard() {
+    final total = _controller.stage2Titles.length;
+    final approved = _approvedTitles.length;
+    final pct = total == 0 ? 0.0 : approved / total;
+    return _buildCard(
+      title: 'ملخص اعتماد المرحلة',
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          Text('$approved/$total',
+              style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937))),
+          const Text('عناصر معتمدة',
+              style: TextStyle(color: Color(0xFF6B7280))),
+          const SizedBox(height: 24),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: pct,
+              backgroundColor: const Color(0xFFE5E7EB),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+              minHeight: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text('${(pct * 100).round()}% مكتمل',
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStageFileCard() {
+    final pdf = _controller.stage2?.pdfFile;
+    final hasFile = pdf != null && pdf.isNotEmpty;
+    return _buildCard(
+      title: 'ملف المرحلة الثانية',
+      icon: Icons.description_outlined,
+      titleIconColor: Colors.red,
+      child: hasFile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text('ملف الخطة المرفوع',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F2937))),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openFile(pdf),
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    label: const Text('عرض الملف'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF2D62ED),
+                      side: const BorderSide(color: Color(0xFF2D62ED)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Container(
+              height: 150,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text('لم يتم رفع ملف بعد',
+                    style: TextStyle(color: Color(0xFF9CA3AF))),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildStageRequirementsCard() {
+    final titles = _controller.stage2Titles;
+    return _buildCard(
+      title: 'متطلبات المرحلة الثانية',
+      child: titles.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('لا توجد عناصر',
+                  style: TextStyle(color: Color(0xFF6B7280))),
+            )
+          : Column(
+              children: titles.asMap().entries.map((entry) {
+                final index = entry.key;
+                final title = entry.value;
+                final isApproved = _approvedTitles.contains(index);
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isApproved
+                        ? const Color(0xFFF0FDF4)
+                        : const Color(0xFFFFFBEB),
+                    border: Border.all(
+                        color: isApproved
+                            ? const Color(0xFF86EFAC)
+                            : const Color(0xFFFDE68A)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width < 600
+                            ? double.infinity
+                            : 200,
+                        child: Text(title,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _showNeedsEditDialog(context, title),
+                        icon: const Icon(Icons.info_outline,
+                            size: 16, color: Color(0xFFF59E0B)),
+                        label: const Text('يحتاج تعديل',
+                            style: TextStyle(color: Color(0xFFF59E0B))),
+                        style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFF59E0B))),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() => _approvedTitles.add(index));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('تم اعتماد العنصر'),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.check_circle_outline, size: 16),
+                        label: const Text('اعتماد'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isApproved
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFF9CA3AF),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      Icon(Icons.check_circle_outline,
+                          color: isApproved
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFF59E0B)),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+    );
+  }
+
+  // ===================== المرحلة 3 =====================
   Widget _buildStage3Content() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,241 +675,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     );
   }
 
-  // --- Stage 1 Widgets ---
-  Widget _buildTeamMembersCard() {
-    // Hardcoded for UI match
-    final students = [
-      {'name': 'أحمد محمد علي', 'role': 'قائد الفريق'},
-      {'name': 'فاطمة سعيد حسن', 'role': 'عضو'},
-      {'name': 'خالد عبدالله محمد', 'role': 'عضو'},
-      {'name': 'نورا إبراهيم أحمد', 'role': 'عضو'},
-    ];
-
-    return _buildCard(
-      title: 'أعضاء الفريق',
-      icon: Icons.people_outline,
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: MediaQuery.of(context).size.width < 600 ? 1 : 2,
-          childAspectRatio: MediaQuery.of(context).size.width < 600 ? 8 : 6,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: students.length,
-        itemBuilder: (context, index) {
-          final s = students[index];
-          final isLeader = s['role'] == 'قائد الفريق';
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    s['name']!,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF4B5563)),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (isLeader)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(color: const Color(0xFF2D62ED), borderRadius: BorderRadius.circular(16)),
-                    child: const Text('قائد الفريق', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildResearchDetailsCard() {
-    return _buildCard(
-      title: 'تفاصيل البحث',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('عنوان البحث', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
-          const SizedBox(height: 8),
-          TextFormField(
-            initialValue: 'تأثير التسويق الرقمي على سلوك المستهلك',
-            readOnly: true,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFFF9FAFB),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('وصف البحث', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
-          const SizedBox(height: 8),
-          TextFormField(
-            initialValue: 'يهدف هذا البحث إلى دراسة تأثير استراتيجيات التسويق الرقمي على سلوك المستهلك في السوق اليمني، من خلال تحليل أنماط الشراء الإلكتروني والعوامل المؤثرة في قرارات الشراء عبر المنصات الرقمية. سيتم استخدام منهج البحث الوصفي التحليلي لجمع البيانات من عينة عشوائية من المستهلكين.',
-            readOnly: true,
-            maxLines: 4,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFFF9FAFB),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildApprovalCard() {
-    return _buildCard(
-      title: 'اعتماد البحث',
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.cancel_outlined, color: Colors.white),
-              label: const Text('رفض البحث', style: TextStyle(color: Colors.white, fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-              label: const Text('اعتماد البحث', style: TextStyle(color: Colors.white, fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Stage 2 Widgets ---
-  Widget _buildStageSummaryCard() {
-    return _buildCard(
-      title: 'ملخص اعتماد المرحلة',
-      child: Column(
-        children: [
-          const SizedBox(height: 16),
-          const Text('9/17', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
-          const Text('عناصر معتمدة', style: TextStyle(color: Color(0xFF6B7280))),
-          const SizedBox(height: 24),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: const LinearProgressIndicator(
-              value: 0.53,
-              backgroundColor: Color(0xFFE5E7EB),
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
-              minHeight: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text('53% مكتمل', style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStageFileCard() {
-    return _buildCard(
-      title: 'ملف المرحلة الثانية',
-      icon: Icons.description_outlined,
-      titleIconColor: Colors.red,
-      child: Container(
-        height: 150,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(8),
-          // border: Border.all(color: const Color(0xFFD1D5DB), style: BorderStyle.solid),
-        ),
-        // Draw dashed border in reality using a package, but we'll use solid for now or custom painter.
-        // Actually, simple Container is fine for UI placeholder
-      ),
-    );
-  }
-
-  Widget _buildStageRequirementsCard() {
-    return _buildCard(
-      title: 'متطلبات المرحلة الثانية',
-      child: Column(
-        children: _stage2Reqs.asMap().entries.map((entry) {
-          final int index = entry.key;
-          final r = entry.value;
-          final isApproved = r['status'] == 'approved';
-          
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isApproved ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
-              border: Border.all(color: isApproved ? const Color(0xFF86EFAC) : const Color(0xFFFDE68A)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                SizedBox(
-                  width: MediaQuery.of(context).size.width < 600 ? double.infinity : 200,
-                  child: Text(r['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _showNeedsEditDialog(context, r['title']!),
-                  icon: Icon(Icons.info_outline, size: 16, color: isApproved ? const Color(0xFFF59E0B) : const Color(0xFFF59E0B)),
-                  label: Text('يحتاج تعديل', style: TextStyle(color: isApproved ? const Color(0xFFF59E0B) : const Color(0xFFF59E0B))),
-                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFF59E0B))),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _stage2Reqs[index]['status'] = 'approved';
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('تم الاعتماد بنجاح'),
-                        backgroundColor: Colors.green,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.check_circle_outline, size: 16),
-                  label: const Text('اعتماد'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isApproved ? const Color(0xFF10B981) : const Color(0xFF9CA3AF),
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                Icon(Icons.check_circle_outline, color: isApproved ? const Color(0xFF10B981) : const Color(0xFFF59E0B)),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // --- Stage 3 Widgets ---
   Widget _buildDiscussionStatusCard() {
+    final pct = ((_controller.stage3?.discussionPercent ?? 0) / 100).clamp(0.0, 1.0);
     return _buildCard(
       title: 'حالة مناقشة الخطة',
       child: Padding(
@@ -401,22 +687,23 @@ class _StageDetailsViewState extends State<StageDetailsView> {
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 120,
               height: 120,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   CircularProgressIndicator(
-                    value: 0.68,
+                    value: pct,
                     strokeWidth: 12,
-                    backgroundColor: Color(0xFFE5E7EB),
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2D62ED)),
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Color(0xFF2D62ED)),
                   ),
                   Center(
                     child: Text(
-                      '68%',
-                      style: TextStyle(
+                      '${(pct * 100).round()}%',
+                      style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1F2937),
@@ -429,17 +716,19 @@ class _StageDetailsViewState extends State<StageDetailsView> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text('نسبة إنجاز المناقشة', style: TextStyle(color: Color(0xFF6B7280))),
+                const Text('نسبة إنجاز المناقشة',
+                    style: TextStyle(color: Color(0xFF6B7280))),
                 const SizedBox(height: 16),
                 Container(
                   constraints: const BoxConstraints(maxWidth: 300),
                   width: MediaQuery.of(context).size.width * 0.7,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: const LinearProgressIndicator(
-                      value: 0.68,
-                      backgroundColor: Color(0xFFE5E7EB),
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2D62ED)),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF2D62ED)),
                       minHeight: 12,
                     ),
                   ),
@@ -464,14 +753,21 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('نسبة الإنجاز (%)', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+                    const Text('نسبة الإنجاز (%)',
+                        style:
+                            TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
                     const SizedBox(height: 8),
                     TextFormField(
-                      initialValue: '68',
+                      controller: _s3PercentCtrl,
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE5E7EB))),
                       ),
                     ),
                   ],
@@ -482,15 +778,27 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('تاريخ المناقشة', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+                    const Text('تاريخ المناقشة',
+                        style:
+                            TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
                     const SizedBox(height: 8),
                     TextFormField(
-                      initialValue: '11/01/2025',
+                      readOnly: true,
+                      onTap: _pickS3Date,
+                      controller: TextEditingController(
+                          text: _s3Date != null
+                              ? DateFormat('yyyy/MM/dd').format(_s3Date!)
+                              : ''),
                       decoration: InputDecoration(
+                        hintText: 'اختر التاريخ',
                         filled: true,
                         fillColor: Colors.white,
-                        suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFF9CA3AF), size: 18),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                        suffixIcon: const Icon(Icons.calendar_today,
+                            color: Color(0xFF9CA3AF), size: 18),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE5E7EB))),
                       ),
                     ),
                   ],
@@ -499,15 +807,19 @@ class _StageDetailsViewState extends State<StageDetailsView> {
             ],
           ),
           const SizedBox(height: 16),
-          const Text('ملاحظة (اختياري)', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+          const Text('ملاحظة (اختياري)',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
           const SizedBox(height: 8),
           TextFormField(
+            controller: _s3NoteCtrl,
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'أدخل أي ملاحظات حول المناقشة',
               filled: true,
               fillColor: const Color(0xFFF3F4F6),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none),
             ),
           ),
           const SizedBox(height: 24),
@@ -515,26 +827,33 @@ class _StageDetailsViewState extends State<StageDetailsView> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed:
+                      _controller.isSaving ? null : () => _saveStage3(false),
                   icon: const Icon(Icons.cancel_outlined, color: Colors.white),
-                  label: const Text('لم تتم المناقشة', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  label: const Text('لم تتم المناقشة',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFDC2626),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-                  label: const Text('تمت المناقشة', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  onPressed:
+                      _controller.isSaving ? null : () => _saveStage3(true),
+                  icon: const Icon(Icons.check_circle_outline,
+                      color: Colors.white),
+                  label: const Text('تمت المناقشة',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ),
@@ -545,325 +864,166 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     );
   }
 
-  // --- Stage 4 Widgets ---
+  Future<void> _pickS3Date() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _s3Date ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) setState(() => _s3Date = picked);
+  }
+
+  void _saveStage3(bool discussed) {
+    final percent = double.tryParse(_s3PercentCtrl.text.trim()) ?? 0;
+    _handle(
+      () => _controller.saveStage3(
+        discussed: discussed,
+        percent: percent,
+        date: _s3Date,
+        note: _s3NoteCtrl.text.trim(),
+      ),
+      'تم حفظ نتيجة المناقشة',
+    );
+  }
+
+  // ===================== المرحلة 4 =====================
   Widget _buildStage4Content() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (MediaQuery.of(context).size.width < 1000)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildDefineRequirementsCard(),
-              const SizedBox(height: 24),
-              _buildStudentDocumentCard(),
-            ],
-          )
-        else
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildDefineRequirementsCard()),
-              const SizedBox(width: 24),
-              Expanded(child: _buildStudentDocumentCard()),
-            ],
-          ),
+        _buildStudentDocumentCard(),
         const SizedBox(height: 24),
         _buildStageEvaluationCard(),
       ],
     );
   }
 
-  Widget _buildDefineRequirementsCard() {
-    return _buildCard(
-      title: 'تحديد متطلبات النزول وإرسال الطلب',
-      icon: Icons.assignment_add,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('الرجاء تحديد المتطلبات اللازمة لقيام الطالب بالنزول الميداني:', style: TextStyle(color: Color(0xFF4B5563))),
-          const SizedBox(height: 16),
-          // Mock requirements list
-          _buildRequirementInput('1. تحديد منطقة النزول الميداني بدقة.'),
-          const SizedBox(height: 12),
-          _buildRequirementInput('2. تجهيز الاستبانة واعتمادها.'),
-          const SizedBox(height: 12),
-          _buildRequirementInput('3. إرفاق خطاب تسهيل المهمة.'),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('إضافة متطلب جديد'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF2D62ED),
-              side: const BorderSide(color: Color(0xFF2D62ED)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.send, color: Colors.white, size: 18),
-              label: const Text('إرسال الطلب للطالب', style: TextStyle(color: Colors.white, fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981), // Green color for action
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRequirementInput(String initialValue) {
-    return TextFormField(
-      initialValue: initialValue,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: const Color(0xFFF9FAFB),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-        suffixIcon: const Icon(Icons.delete_outline, color: Colors.red),
-      ),
-    );
-  }
-
   Widget _buildStudentDocumentCard() {
+    final pdf = _controller.stage4?.pdfFile;
+    final hasFile = pdf != null && pdf.isNotEmpty;
     return _buildCard(
       title: 'مراجعة المستند المرفق من الطالب',
       icon: Icons.find_in_page_outlined,
       titleIconColor: const Color(0xFF2D62ED),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF86EFAC)),
-            ),
-            child: Column(
+      child: hasFile
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'تقرير النزول ...',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'تم الإرسال: 2025/10/25 - الحجم: 2.4 MB',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981),
-                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
                   ),
                   child: const Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle, color: Colors.white, size: 14),
-                      SizedBox(width: 4),
-                      Text('تم الاستلام', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text('مستند النزول الميداني المرفوع',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F2937))),
+                      ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openFile(pdf),
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    label: const Text('عرض المستند'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF2D62ED),
+                      side: const BorderSide(color: Color(0xFF2D62ED)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
               ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showDocumentDetailsDialog(context),
-              icon: const Icon(Icons.visibility_outlined, size: 18),
-              label: const Text('عرض المستند'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF2D62ED),
-                side: const BorderSide(color: Color(0xFF2D62ED)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            )
+          : Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Text('لم يرفع الطالب مستنداً بعد',
+                    style: TextStyle(color: Color(0xFF9CA3AF))),
               ),
             ),
-          ),
-        ],
-      ),
     );
   }
 
-
-
   Widget _buildStageEvaluationCard() {
+    final approval = _controller.stage4?.approval;
     return _buildCard(
-      title: 'وضع النسبة وتقييم المرحلة',
-      icon: Icons.percent,
+      title: 'تقييم المرحلة',
+      icon: Icons.fact_check_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Progress indicator
-          Wrap(
-            spacing: 24,
-            runSpacing: 24,
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              const SizedBox(
-                width: 100,
-                height: 100,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: 0.60,
-                      strokeWidth: 10,
-                      backgroundColor: Color(0xFFE5E7EB),
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
-                    ),
-                    Center(
-                      child: Text('60%', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text('نسبة إنجاز المرحلة', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 12),
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 300),
-                    width: MediaQuery.of(context).size.width * 0.5,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: const LinearProgressIndicator(
-                        value: 0.60,
-                        backgroundColor: Color(0xFFE5E7EB),
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
-                        minHeight: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 24),
-          // Percentage + notes input
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('نسبة الإنجاز (%)', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      initialValue: '60',
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('تاريخ التقييم', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      initialValue: '25/10/2025',
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFF9CA3AF), size: 18),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Text('ملاحظات المشرف (اختياري)', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+          if (approval != null) ...[
+            _buildStatusChip(
+                approval ? 'تم اعتماد المرحلة' : 'تم رفض المستند', approval),
+            const SizedBox(height: 16),
+          ],
+          const Text('ملاحظات المشرف (اختياري)',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
           const SizedBox(height: 8),
           TextFormField(
+            controller: _s4NotesCtrl,
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'أدخل ملاحظاتك حول أداء الطالب في النزول الميداني',
               filled: true,
               fillColor: const Color(0xFFF3F4F6),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none),
             ),
           ),
           const SizedBox(height: 24),
-          // Action buttons
           Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed:
+                      _controller.isSaving ? null : () => _saveStage4(false),
                   icon: const Icon(Icons.cancel_outlined, color: Colors.white),
-                  label: const Text('رفض المستند', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  label: const Text('رفض المستند',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFDC2626),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-                  label: const Text('اعتماد المرحلة', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  onPressed:
+                      _controller.isSaving ? null : () => _saveStage4(true),
+                  icon: const Icon(Icons.check_circle_outline,
+                      color: Colors.white),
+                  label: const Text('اعتماد المرحلة',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ),
@@ -874,16 +1034,240 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     );
   }
 
+  void _saveStage4(bool approved) {
+    _handle(
+      () => _controller.saveStage4(
+          approved: approved, notes: _s4NotesCtrl.text.trim()),
+      approved ? 'تم اعتماد المرحلة' : 'تم رفض المستند',
+    );
+  }
+
+  // ===================== المرحلة 5 =====================
+  Widget _buildStage5Content() {
+    final sections = _controller.stage5Sections;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (sections.isEmpty)
+          _buildCard(
+            title: 'أقسام مشروع البحث',
+            icon: Icons.menu_book_outlined,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text('لا توجد أقسام لعرضها بعد.',
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 16)),
+              ),
+            ),
+          )
+        else
+          ...sections.map((s) => Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: _buildStage5SectionCard(s),
+              )),
+        _buildStage5ProgressCard(),
+      ],
+    );
+  }
+
+  Widget _buildStage5SectionCard(Stage5Section s) {
+    final hasFile = s.pdfFile != null && s.pdfFile!.isNotEmpty;
+    final noteCtrl =
+        _s5Notes.putIfAbsent(s.titleId, () => TextEditingController());
+    return _buildCard(
+      title: s.titleName,
+      icon: Icons.description_outlined,
+      titleIconColor: const Color(0xFF2D62ED),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasFile) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('ملف ${s.titleName} المرفوع',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1F2937))),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _openFile(s.pdfFile),
+                icon: const Icon(Icons.visibility_outlined, size: 18),
+                label: const Text('عرض الملف'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2D62ED),
+                  side: const BorderSide(color: Color(0xFF2D62ED)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+          ] else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Text('لم يُرفع الملف بعد',
+                    style: TextStyle(color: Color(0xFF9CA3AF))),
+              ),
+            ),
+          const SizedBox(height: 16),
+          _buildStatusChip(
+              s.approval == true ? 'تم الاعتماد' : 'في انتظار الاعتماد',
+              s.approval == true),
+          const SizedBox(height: 16),
+          const Text('ملاحظة المشرف (اختياري)',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: noteCtrl,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'أدخل ملاحظتك على هذا القسم',
+              filled: true,
+              fillColor: const Color(0xFFF3F4F6),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: (!hasFile || _controller.isSaving)
+                      ? null
+                      : () => _saveStage5Section(s, false),
+                  icon: const Icon(Icons.edit_note, color: Colors.white),
+                  label: const Text('طلب تعديل',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF59E0B),
+                    disabledBackgroundColor: const Color(0xFFE5E7EB),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: (!hasFile || _controller.isSaving)
+                      ? null
+                      : () => _saveStage5Section(s, true),
+                  icon: const Icon(Icons.check_circle_outline,
+                      color: Colors.white),
+                  label: const Text('اعتماد القسم',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    disabledBackgroundColor: const Color(0xFFE5E7EB),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _saveStage5Section(Stage5Section s, bool approved) {
+    final note = (_s5Notes[s.titleId]?.text ?? '').trim();
+    _handle(
+      () => _controller.saveStage5Section(s.titleId,
+          approved: approved, note: note),
+      approved ? 'تم اعتماد القسم' : 'تم إرسال طلب التعديل',
+    );
+  }
+
+  /// نسبة إنجاز المرحلة الخامسة محسوبة تلقائياً = الأقسام المعتمدة ÷ إجمالي الأقسام (عرض فقط).
+  Widget _buildStage5ProgressCard() {
+    final sections = _controller.stage5Sections;
+    final total = sections.length;
+    final approved = sections.where((s) => s.approval == true).length;
+    final pct = total == 0 ? 0.0 : approved / total;
+    return _buildCard(
+      title: 'نسبة إنجاز المرحلة',
+      icon: Icons.percent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Center(
+            child: SizedBox(
+              width: 100,
+              height: 100,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CircularProgressIndicator(
+                    value: pct,
+                    strokeWidth: 10,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFF10B981)),
+                  ),
+                  Center(
+                    child: Text('${(pct * 100).round()}%',
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1F2937))),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('$approved من $total أقسام معتمدة',
+              style: const TextStyle(
+                  color: Color(0xFF6B7280), fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
+          const Text('تُحسب النسبة تلقائياً بحسب الأقسام المعتمدة',
+              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  // ===================== مكوّنات مشتركة =====================
   void _showNeedsEditDialog(BuildContext context, String requirementTitle) {
     final textController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Row(
               children: [
                 const Icon(Icons.edit_note, color: Color(0xFFF59E0B)),
@@ -891,7 +1275,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                 Expanded(
                   child: Text(
                     'إرسال ملاحظة لتعديل ($requirementTitle)',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -902,17 +1287,19 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'الملاحظة:',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF4B5563)),
-                  ),
+                  const Text('الملاحظة:',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4B5563))),
                   const SizedBox(height: 8),
                   TextField(
                     controller: textController,
                     maxLines: 4,
                     decoration: InputDecoration(
                       hintText: 'اكتب الملاحظة أو التعديلات المطلوبة هنا...',
-                      hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
+                      hintStyle:
+                          const TextStyle(fontSize: 14, color: Colors.grey),
                       filled: true,
                       fillColor: const Color(0xFFF9FAFB),
                       border: OutlineInputBorder(
@@ -930,14 +1317,16 @@ class _StageDetailsViewState extends State<StageDetailsView> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('إلغاء', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء',
+                    style: TextStyle(
+                        color: Colors.grey, fontWeight: FontWeight.bold)),
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final note = textController.text.trim();
                   if (note.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
                       const SnackBar(
                         content: Text('الرجاء إدخال الملاحظة أولاً'),
                         backgroundColor: Colors.red,
@@ -945,21 +1334,21 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                     );
                     return;
                   }
-                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  Navigator.pop(context);
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('تم إرسال الملاحظة بنجاح'),
-                      backgroundColor: Color(0xFF10B981),
-                    ),
+                  Navigator.pop(dialogContext);
+                  await _handle(
+                    () => _controller.addStage2TitleNote(
+                        requirementTitle, note),
+                    'تم إرسال الملاحظة بنجاح',
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF59E0B),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text('إرسال الملاحظة', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('إرسال الملاحظة',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -968,93 +1357,33 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     );
   }
 
-  void _showDocumentDetailsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Row(
-              children: [
-                Icon(Icons.find_in_page_outlined, color: Color(0xFF2D62ED)),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'تفاصيل المستند المرفق',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: 450,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildDetailRow('اسم الملف:', 'تقرير النزول الميداني.pdf'),
-                  const Divider(height: 20),
-                  _buildDetailRow('الحجم:', '2.4 MB'),
-                  const Divider(height: 20),
-                  _buildDetailRow('تاريخ الرفع:', '2025/10/25 12:48 م'),
-                  const Divider(height: 20),
-                  _buildDetailRow('الحالة:', 'تم الاستلام والدراسة'),
-                  const Divider(height: 20),
-                  _buildDetailRow('الوصف:', 'تقرير مفصل يحتوي على نتائج الاستبيان الميداني وتحليل استجابات عينة الدراسة الخاص بطلاب المجموعة الثانية في المرحلة الرابعة من المشروع.'),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('إلغاء', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  Navigator.pop(context);
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('بدء تحميل الملف... تم تنزيل المستند بنجاح'),
-                      backgroundColor: Color(0xFF10B981),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.download, color: Colors.white),
-                label: const Text('تحميل الملف', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D62ED),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+  Widget _buildStatusChip(String label, bool positive) {
+    final color = positive ? const Color(0xFF10B981) : const Color(0xFFDC2626);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(positive ? Icons.check_circle : Icons.cancel,
+              color: color, size: 18),
+          const SizedBox(width: 8),
+          Text(label,
+              style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937), height: 1.4),
-        ),
-      ],
-    );
-  }
-
-  // Helper Widget
-  Widget _buildCard({required String title, required Widget child, IconData? icon, Color? titleIconColor}) {
+  Widget _buildCard(
+      {required String title,
+      required Widget child,
+      IconData? icon,
+      Color? titleIconColor}) {
     final isMobile = MediaQuery.of(context).size.width < 800;
     return Container(
       padding: EdgeInsets.all(isMobile ? 16 : 32),
@@ -1069,13 +1398,18 @@ class _StageDetailsViewState extends State<StageDetailsView> {
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, color: titleIconColor ?? const Color(0xFF4B5563), size: isMobile ? 22 : 24),
+                Icon(icon,
+                    color: titleIconColor ?? const Color(0xFF4B5563),
+                    size: isMobile ? 22 : 24),
                 const SizedBox(width: 8),
               ],
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: isMobile ? 17 : 20, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937)),
+                  style: TextStyle(
+                      fontSize: isMobile ? 17 : 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1F2937)),
                 ),
               ),
             ],

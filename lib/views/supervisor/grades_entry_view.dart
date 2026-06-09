@@ -35,9 +35,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
     if (widget.isGuest) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'عرض الضيف: الدرجات لن تُحفظ.')),
+          const SnackBar(content: Text('عرض الضيف: الدرجات لن تُحفظ.')),
         );
       }
       return;
@@ -115,7 +113,8 @@ class _GradesEntryViewState extends State<GradesEntryView> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF10B981),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -182,11 +181,13 @@ class _GradesEntryViewState extends State<GradesEntryView> {
         children: [
           _buildStatCard('إجمالي الطلاب', _controller.totalStudents.toString(),
               const Color(0xFF2D62ED)),
-          _buildStatCard('تم إدخال الدرجات', _controller.gradedStudents.toString(),
-              const Color(0xFF10B981)),
-          _buildStatCard('في انتظار الإدخال', _controller.ungradedStudents.toString(),
-              const Color(0xFFEA580C)),
-          _buildStatCard('المعدل العام', _controller.overallAverage.toStringAsFixed(1),
+          _buildStatCard('تم إدخال الدرجات',
+              _controller.gradedStudents.toString(), const Color(0xFF10B981)),
+          _buildStatCard('في انتظار الإدخال',
+              _controller.ungradedStudents.toString(), const Color(0xFFEA580C)),
+          _buildStatCard(
+              'المعدل العام',
+              _controller.overallAverage.toStringAsFixed(1),
               const Color(0xFF8B5CF6)),
         ],
       );
@@ -194,16 +195,18 @@ class _GradesEntryViewState extends State<GradesEntryView> {
 
     return Row(
       children: [
-        _buildStatCardExpanded('إجمالي الطلاب', _controller.totalStudents.toString(),
-            const Color(0xFF2D62ED)),
+        _buildStatCardExpanded('إجمالي الطلاب',
+            _controller.totalStudents.toString(), const Color(0xFF2D62ED)),
         const SizedBox(width: 16),
-        _buildStatCardExpanded('تم إدخال الدرجات', _controller.gradedStudents.toString(),
-            const Color(0xFF10B981)),
+        _buildStatCardExpanded('تم إدخال الدرجات',
+            _controller.gradedStudents.toString(), const Color(0xFF10B981)),
         const SizedBox(width: 16),
-        _buildStatCardExpanded('في انتظار الإدخال', _controller.ungradedStudents.toString(),
-            const Color(0xFFEA580C)),
+        _buildStatCardExpanded('في انتظار الإدخال',
+            _controller.ungradedStudents.toString(), const Color(0xFFEA580C)),
         const SizedBox(width: 16),
-        _buildStatCardExpanded('المعدل العام', _controller.overallAverage.toStringAsFixed(1),
+        _buildStatCardExpanded(
+            'المعدل العام',
+            _controller.overallAverage.toStringAsFixed(1),
             const Color(0xFF8B5CF6)),
       ],
     );
@@ -273,7 +276,8 @@ class _GradesEntryViewState extends State<GradesEntryView> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: _controller.students.length,
-        separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade100),
+        separatorBuilder: (context, index) =>
+            Divider(height: 1, color: Colors.grey.shade100),
         itemBuilder: (context, index) {
           final item = _controller.students[index];
           final grade = _controller.grades[item.student.id];
@@ -317,14 +321,16 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                     ),
                     if (item.student.role == 'قائد الفريق')
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF2D62ED),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           item.student.role!,
-                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 10),
                         ),
                       ),
                   ],
@@ -333,7 +339,8 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                 // Row 2: project name
                 Text(
                   item.projectName,
-                  style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                  style:
+                      const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 2,
                 ),
@@ -341,17 +348,22 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                 // Row 3: grade input + rating
                 Row(
                   children: [
-                    const Text('الدرجة: ', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                    const Text('الدرجة: ',
+                        style:
+                            TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
                     SizedBox(
                       width: 100,
                       child: TextFormField(
-                        initialValue: grade != null ? grade.toInt().toString() : '',
+                        initialValue:
+                            grade != null ? grade.toInt().toString() : '',
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
                         decoration: InputDecoration(
                           hintText: '0-100',
-                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          hintStyle: TextStyle(
+                              color: Colors.grey.shade400, fontSize: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 8),
                           filled: true,
                           fillColor: Colors.grey.shade50,
                           border: OutlineInputBorder(
@@ -361,7 +373,9 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                         ),
                         onChanged: (value) {
                           final numValue = double.tryParse(value);
-                          if (numValue != null && numValue >= 0 && numValue <= 100) {
+                          if (numValue != null &&
+                              numValue >= 0 &&
+                              numValue <= 100) {
                             _controller.updateGrade(item.student.id!, numValue);
                           } else if (value.isEmpty) {
                             _controller.updateGrade(item.student.id!, null);
@@ -370,10 +384,13 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    const Text('التقدير: ', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                    const Text('التقدير: ',
+                        style:
+                            TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
                     Text(
                       rating['text'],
-                      style: TextStyle(color: rating['color'], fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: rating['color'], fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -400,17 +417,42 @@ class _GradesEntryViewState extends State<GradesEntryView> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
             ),
             child: const Row(
               children: [
-                SizedBox(width: 40, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(flex: 2, child: Text('اسم الطالب', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(flex: 3, child: Text('عنوان البحث', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(flex: 1, child: Text('الدور', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(flex: 1, child: Text('الدرجة (من 100)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(flex: 1, child: Text('التقدير', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
+                SizedBox(
+                    width: 40,
+                    child: Text('#',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                Expanded(
+                    flex: 2,
+                    child: Text('اسم الطالب',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                Expanded(
+                    flex: 3,
+                    child: Text('عنوان البحث',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                Expanded(
+                    flex: 1,
+                    child: Text('الدور',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                Expanded(
+                    flex: 1,
+                    child: Text('الدرجة (من 100)',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                Expanded(
+                    flex: 1,
+                    child: Text('التقدير',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
               ],
             ),
           ),
@@ -419,92 +461,108 @@ class _GradesEntryViewState extends State<GradesEntryView> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _controller.students.length,
-            separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade100),
+            separatorBuilder: (context, index) =>
+                Divider(height: 1, color: Colors.grey.shade100),
             itemBuilder: (context, index) {
               final item = _controller.students[index];
-                final grade = _controller.grades[item.student.id];
-                final rating = _controller.getRating(grade);
+              final grade = _controller.grades[item.student.id];
+              final rating = _controller.getRating(grade);
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 40, child: Text('${index + 1}', style: const TextStyle(color: Colors.grey))),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          item.student.name,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    SizedBox(
+                        width: 40,
+                        child: Text('${index + 1}',
+                            style: const TextStyle(color: Colors.grey))),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        item.student.name,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          item.projectName,
-                          style: const TextStyle(color: Colors.grey),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        item.projectName,
+                        style: const TextStyle(color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Expanded(
-                        flex: 1,
-                        child: item.student.role == 'قائد الفريق'
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2D62ED),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  item.student.role!,
-                                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                                  textAlign: TextAlign.center,
-                                ),
-                              )
-                            : Text(item.student.role ?? 'عضو', style: const TextStyle(color: Colors.grey)),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Container(
-                          padding: const EdgeInsets.only(left: 32),
-                          child: TextFormField(
-                            initialValue: grade != null ? grade.toInt().toString() : '',
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            decoration: InputDecoration(
-                              hintText: 'أدخل الدرجة',
-                              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                              filled: true,
-                              fillColor: Colors.grey.shade50,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: item.student.role == 'قائد الفريق'
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2D62ED),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              child: Text(
+                                item.student.role!,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 10),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : Text(item.student.role ?? 'عضو',
+                              style: const TextStyle(color: Colors.grey)),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        padding: const EdgeInsets.only(left: 32),
+                        child: TextFormField(
+                          initialValue:
+                              grade != null ? grade.toInt().toString() : '',
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          decoration: InputDecoration(
+                            hintText: 'أدخل الدرجة',
+                            hintStyle: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 8),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
                             ),
-                            onChanged: (value) {
-                              final numValue = double.tryParse(value);
-                              if (numValue != null && numValue >= 0 && numValue <= 100) {
-                                _controller.updateGrade(item.student.id!, numValue);
-                              } else if (value.isEmpty) {
-                                _controller.updateGrade(item.student.id!, null);
-                              }
-                            },
                           ),
+                          onChanged: (value) {
+                            final numValue = double.tryParse(value);
+                            if (numValue != null &&
+                                numValue >= 0 &&
+                                numValue <= 100) {
+                              _controller.updateGrade(
+                                  item.student.id!, numValue);
+                            } else if (value.isEmpty) {
+                              _controller.updateGrade(item.student.id!, null);
+                            }
+                          },
                         ),
                       ),
-                      Expanded(
-                        flex: 1,
-                        child: Center(
-                          child: Text(
-                            rating['text'],
-                            style: TextStyle(color: rating['color'], fontWeight: FontWeight.bold),
-                          ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Center(
+                        child: Text(
+                          rating['text'],
+                          style: TextStyle(
+                              color: rating['color'],
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
-                    ],
-                  ),
-                );
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ],

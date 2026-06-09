@@ -89,7 +89,10 @@ class _ChatsViewState extends State<ChatsView> {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.grey.shade200),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4)),
+                            BoxShadow(
+                                color: Colors.black.withAlpha(10),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4)),
                           ],
                         ),
                         child: Row(
@@ -126,7 +129,10 @@ class _ChatsViewState extends State<ChatsView> {
           children: [
             const Text(
               'الدردشات',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
+              style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D3748)),
             ),
             const SizedBox(height: 4),
             Text(
@@ -152,8 +158,11 @@ class _ChatsViewState extends State<ChatsView> {
               prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
               filled: true,
               fillColor: const Color(0xFFF7FAFC),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none),
             ),
           ),
         ),
@@ -161,15 +170,18 @@ class _ChatsViewState extends State<ChatsView> {
         Expanded(
           child: ListView.separated(
             itemCount: _controller.chats.length,
-            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            separatorBuilder: (context, index) =>
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
             itemBuilder: (context, index) {
               final chat = _controller.chats[index];
-              final isSelected = _controller.selectedChat?.id == chat.id;
+              final isSelected =
+                  _controller.selectedChat?.groupId == chat.groupId;
 
               return InkWell(
-                onTap: () => _controller.selectChat(chat.id),
+                onTap: () => _controller.selectChat(chat.groupId),
                 child: Container(
-                  color: isSelected ? const Color(0xFFF0F4FF) : Colors.transparent,
+                  color:
+                      isSelected ? const Color(0xFFF0F4FF) : Colors.transparent,
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
@@ -177,17 +189,21 @@ class _ChatsViewState extends State<ChatsView> {
                       if (chat.unreadCount > 0)
                         Container(
                           padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(color: Color(0xFF2D62ED), shape: BoxShape.circle),
+                          decoration: const BoxDecoration(
+                              color: Color(0xFF2D62ED), shape: BoxShape.circle),
                           child: Text(
                             chat.unreadCount.toString(),
-                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold),
                           ),
                         )
                       else
                         const SizedBox(width: 20),
-                      
+
                       const SizedBox(width: 12),
-                      
+
                       // Texts
                       Expanded(
                         child: Column(
@@ -198,34 +214,43 @@ class _ChatsViewState extends State<ChatsView> {
                               children: [
                                 Text(
                                   chat.time,
-                                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                  style: TextStyle(
+                                      color: Colors.grey.shade500,
+                                      fontSize: 12),
                                 ),
                                 Text(
                                   chat.name,
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2D3748)),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Text(
                               chat.projectName,
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF2D62ED)),
+                              style: const TextStyle(
+                                  fontSize: 12, color: Color(0xFFA0AEC0)),
                               textAlign: TextAlign.right,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              chat.lastMessage,
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.right,
-                            ),
+                            if (chat.lastMessage.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                chat.lastMessage,
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey.shade600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
+                              ),
+                            ],
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(width: 12),
-                      
+
                       // Avatar
                       const CircleAvatar(
                         radius: 24,
@@ -246,7 +271,8 @@ class _ChatsViewState extends State<ChatsView> {
   Widget _buildChatWindow(bool isDesktop) {
     if (_controller.selectedChat == null) {
       return Center(
-        child: Text('اختر محادثة للبدء', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+        child: Text('اختر محادثة للبدء',
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
       );
     }
 
@@ -271,8 +297,14 @@ class _ChatsViewState extends State<ChatsView> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(chat.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
-                  Text(chat.projectName, style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
+                  Text(chat.name,
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D3748))),
+                  Text(chat.projectName,
+                      style:
+                          TextStyle(fontSize: 14, color: Colors.grey.shade500)),
                 ],
               ),
               const SizedBox(width: 16),
@@ -307,7 +339,9 @@ class _ChatsViewState extends State<ChatsView> {
           decoration: BoxDecoration(
             color: Colors.white,
             border: Border(top: BorderSide(color: Colors.grey.shade200)),
-            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
+            borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16)),
           ),
           child: Row(
             children: [
@@ -331,8 +365,11 @@ class _ChatsViewState extends State<ChatsView> {
                     hintStyle: TextStyle(color: Colors.grey.shade400),
                     filled: true,
                     fillColor: const Color(0xFFF7FAFC),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none),
                   ),
                   onSubmitted: (_) => _sendMessage(),
                 ),
@@ -348,11 +385,12 @@ class _ChatsViewState extends State<ChatsView> {
     // In the screenshot:
     // Student messages are Blue and on the Right.
     // Supervisor (isMe) messages are White and on the Left.
-    
+
     final align = msg.isMe ? CrossAxisAlignment.start : CrossAxisAlignment.end;
     final bgColor = msg.isMe ? Colors.white : const Color(0xFF2D62ED);
     final textColor = msg.isMe ? const Color(0xFF2D3748) : Colors.white;
-    final timeColor = msg.isMe ? Colors.grey.shade500 : Colors.white.withAlpha(200);
+    final timeColor =
+        msg.isMe ? Colors.grey.shade500 : Colors.white.withAlpha(200);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -365,7 +403,9 @@ class _ChatsViewState extends State<ChatsView> {
               color: bgColor,
               borderRadius: BorderRadius.circular(8),
               border: msg.isMe ? Border.all(color: Colors.grey.shade200) : null,
-              boxShadow: msg.isMe ? [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)] : null,
+              boxShadow: msg.isMe
+                  ? [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)]
+                  : null,
             ),
             constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
@@ -377,9 +417,18 @@ class _ChatsViewState extends State<ChatsView> {
                   textAlign: TextAlign.right,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  msg.time,
-                  style: TextStyle(color: timeColor, fontSize: 10),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      msg.time,
+                      style: TextStyle(color: timeColor, fontSize: 10),
+                    ),
+                    if (msg.isMe) ...[
+                      const SizedBox(width: 4),
+                      _buildStatusTick(msg.status),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -387,6 +436,17 @@ class _ChatsViewState extends State<ChatsView> {
         ],
       ),
     );
+  }
+
+  /// علامة حالة رسالة المشرف: ✓ مرسلة، ✓✓ مُسلّمة (رمادي)، ✓✓ مقروءة (أزرق).
+  Widget _buildStatusTick(String? status) {
+    final isRead = status == 'read';
+    final icon = status == 'read' || status == 'delivered'
+        ? Icons.done_all
+        : Icons.done;
+    final color =
+        isRead ? const Color(0xFF34B7F1) : Colors.grey.shade500;
+    return Icon(icon, size: 14, color: color);
   }
 
   @override

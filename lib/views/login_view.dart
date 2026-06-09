@@ -41,12 +41,14 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FD), // Light background color from design
+      backgroundColor:
+          const Color(0xFFF0F4FD), // Light background color from design
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
             child: Container(
               constraints: const BoxConstraints(maxWidth: 450),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
@@ -71,8 +73,10 @@ class _LoginViewState extends State<LoginView> {
                     height: 120,
                     child: Image.asset(
                       'assets/images/logo.png',
-                      errorBuilder: (context, error, stackTrace) => 
-                          const Icon(Icons.school, size: 80, color: Color(0xFF2D62ED)),
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.school,
+                          size: 80,
+                          color: Color(0xFF2D62ED)),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -95,18 +99,22 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Username Field
                   TextField(
                     controller: _usernameController,
                     decoration: InputDecoration(
-                      labelText: 'ادخل الرقم الجامعي',
-                      hintText: 'ادخل الرقم الجامعي',
-                      labelStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-                      hintStyle: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 14),
-                      prefixIcon: const Icon(Icons.person, color: Color(0xFF2D62ED)),
+                      labelText: 'ادخل اسم المستخدم',
+                      hintText: 'ادخل اسم المستخدم',
+                      labelStyle: const TextStyle(
+                          color: Color(0xFF6B7280), fontSize: 14),
+                      hintStyle: const TextStyle(
+                          color: Color(0xFFD1D5DB), fontSize: 14),
+                      prefixIcon:
+                          const Icon(Icons.person, color: Color(0xFF2D62ED)),
                       floatingLabelBehavior: FloatingLabelBehavior.always,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
@@ -117,12 +125,13 @@ class _LoginViewState extends State<LoginView> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
-                        borderSide: const BorderSide(color: Color(0xFF2D62ED), width: 2),
+                        borderSide: const BorderSide(
+                            color: Color(0xFF2D62ED), width: 2),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Password Field
                   TextField(
                     controller: _passwordController,
@@ -130,11 +139,15 @@ class _LoginViewState extends State<LoginView> {
                     decoration: InputDecoration(
                       labelText: 'ادخل كلمة المرور',
                       hintText: 'ادخل كلمة المرور',
-                      labelStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-                      hintStyle: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 14),
-                      prefixIcon: const Icon(Icons.lock, color: Color(0xFF2D62ED)),
+                      labelStyle: const TextStyle(
+                          color: Color(0xFF6B7280), fontSize: 14),
+                      hintStyle: const TextStyle(
+                          color: Color(0xFFD1D5DB), fontSize: 14),
+                      prefixIcon:
+                          const Icon(Icons.lock, color: Color(0xFF2D62ED)),
                       floatingLabelBehavior: FloatingLabelBehavior.always,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
@@ -145,12 +158,13 @@ class _LoginViewState extends State<LoginView> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
-                        borderSide: const BorderSide(color: Color(0xFF2D62ED), width: 2),
+                        borderSide: const BorderSide(
+                            color: Color(0xFF2D62ED), width: 2),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Forgot Password
                   Align(
                     alignment: Alignment.centerRight,
@@ -169,7 +183,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Error Message
                   if (_controller.errorMessage != null)
                     Padding(
@@ -179,7 +193,7 @@ class _LoginViewState extends State<LoginView> {
                         style: const TextStyle(color: Colors.red, fontSize: 14),
                       ),
                     ),
-                    
+
                   // Login Button
                   ElevatedButton(
                     onPressed: _controller.isLoading ? null : _login,
@@ -217,7 +231,7 @@ class _LoginViewState extends State<LoginView> {
                           ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Footer
                   const Text(
                     'للحصول على المساعدة : يرجى التواصل مع الدعم الفني',

@@ -25,7 +25,7 @@ class Supervisor {
       password: json["sprvsr_password"],
       username: json["sprvsr_username"],
       isActive: json["sprvsr_isactive"],
-      programId: json["id_program"],
+      programId: json["program_id"],
     );
   }
 
@@ -36,7 +36,7 @@ class Supervisor {
       "sprvsr_password": password,
       "sprvsr_username": username,
       "sprvsr_isactive": isActive,
-      "id_program": programId,
+      "program_id": programId,
     };
   }
 }

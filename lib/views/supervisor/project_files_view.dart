@@ -194,8 +194,7 @@ class _ProjectFilesViewState extends State<ProjectFilesView>
               children: [
                 Text(
                     'رفع بواسطة: ${file.uploadedBy == 'student' ? 'الطالب' : 'المشرف'}'),
-                Text(
-                    'التاريخ: ${_controller.formatDate(file.uploadedAt)}'),
+                Text('التاريخ: ${_controller.formatDate(file.uploadedAt)}'),
               ],
             ),
             children: [

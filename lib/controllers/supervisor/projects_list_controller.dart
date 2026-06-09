@@ -42,8 +42,7 @@ class ProjectsListController extends ChangeNotifier {
           ),
         ];
       } else {
-        _projects =
-            await SupabaseService.getGroupsBySupervisor(supervisorId);
+        _projects = await SupabaseService.getGroupsBySupervisor(supervisorId);
       }
     } catch (e) {
       debugPrint('خطأ في تحميل المشاريع: $e');

@@ -41,8 +41,19 @@ class SupervisorConstants {
 
   // ============ أنواع الملفات ============
   static const List<String> SUPPORTED_FILE_TYPES = [
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-    'jpg', 'jpeg', 'png', 'gif', 'zip', 'rar',
+    'pdf',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'ppt',
+    'pptx',
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'zip',
+    'rar',
   ];
 
   // ============ حدود الملفات ============

@@ -33,8 +33,7 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
     _controller.addListener(() {
       if (mounted) setState(() {});
     });
-    _controller.loadData(
-        projectId: widget.projectId, isGuest: widget.isGuest);
+    _controller.loadData(projectId: widget.projectId, isGuest: widget.isGuest);
   }
 
   @override
@@ -107,8 +106,6 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
     if (isMobile) {
       return Column(
         children: [
-          _buildImportantDatesCard(),
-          const SizedBox(height: 16),
           _buildProgressCard(),
           const SizedBox(height: 16),
           _buildStatusCard(),
@@ -117,55 +114,9 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
     }
     return Row(
       children: [
-        Expanded(child: _buildImportantDatesCard()),
-        const SizedBox(width: 24),
         Expanded(child: _buildProgressCard()),
         const SizedBox(width: 24),
         Expanded(child: _buildStatusCard()),
-      ],
-    );
-  }
-
-  Widget _buildImportantDatesCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'المواعيد المهمة',
-            style: TextStyle(
-              color: Color(0xFF4B5563),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildDateRow(Icons.event_note, Colors.red, 'تسليم التقرير النهائي', '15 ديسمبر 2025'),
-          const SizedBox(height: 8),
-          _buildDateRow(Icons.event_available, Colors.orange, 'مراجعة المرحلة الثالثة', '20 ديسمبر 2025'),
-          const SizedBox(height: 8),
-          _buildDateRow(Icons.event, Colors.blue, 'اجتماع مع المشرف', '18 ديسمبر 2025'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateRow(IconData icon, Color color, String title, String date) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            '$title - $date',
-            style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563)),
-          ),
-        ),
       ],
     );
   }
@@ -199,7 +150,8 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                   child: LinearProgressIndicator(
                     value: progress / 100,
                     backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2D62ED)),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Color(0xFF2D62ED)),
                     minHeight: 8,
                   ),
                 ),
@@ -263,6 +215,17 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
 
   Widget _buildOverviewSection() {
     final project = _controller.project;
+    // حالة المرحلة الحالية للمجموعة (groups.current_stage)
+    ProjectStage? currentStage;
+    for (final s in _controller.stages) {
+      if (s.id == project?.currentStageId) {
+        currentStage = s;
+        break;
+      }
+    }
+    final stageDone =
+        currentStage?.status == 'completed' || currentStage?.isCompleted == true;
+    final stageStatusText = stageDone ? 'تمت' : 'لم تتم';
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -275,7 +238,8 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
         children: [
           const Row(
             children: [
-              Icon(Icons.description_outlined, color: Color(0xFF2D62ED), size: 20),
+              Icon(Icons.description_outlined,
+                  color: Color(0xFF2D62ED), size: 20),
               SizedBox(width: 8),
               Text(
                 'وصف المشروع',
@@ -323,16 +287,20 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('المرحلة الحالية', style: TextStyle(color: Color(0xFF6B7280))),
+                    const Text('المرحلة الحالية',
+                        style: TextStyle(color: Color(0xFF6B7280))),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.check_circle_outline, color: Colors.green),
+                        const Icon(Icons.check_circle_outline,
+                            color: Colors.green),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             project?.currentStage ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F2937)),
                           ),
                         ),
                       ],
@@ -340,19 +308,27 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('حالة التسليم', style: TextStyle(color: Color(0xFF6B7280))),
-                    SizedBox(height: 8),
+                    const Text('حالة المرحلة',
+                        style: TextStyle(color: Color(0xFF6B7280))),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.check_circle_outline, color: Colors.green),
-                        SizedBox(width: 8),
+                        Icon(
+                          stageDone
+                              ? Icons.check_circle_outline
+                              : Icons.pending_outlined,
+                          color: stageDone ? Colors.green : Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'تم التسليم في الموعد',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                            stageStatusText,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F2937)),
                           ),
                         ),
                       ],
@@ -368,16 +344,20 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('المرحلة الحالية', style: TextStyle(color: Color(0xFF6B7280))),
+                      const Text('المرحلة الحالية',
+                          style: TextStyle(color: Color(0xFF6B7280))),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.check_circle_outline, color: Colors.green),
+                          const Icon(Icons.check_circle_outline,
+                              color: Colors.green),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               project?.currentStage ?? '',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F2937)),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 2,
                             ),
@@ -388,20 +368,28 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('حالة التسليم', style: TextStyle(color: Color(0xFF6B7280))),
-                      SizedBox(height: 8),
+                      const Text('حالة المرحلة',
+                          style: TextStyle(color: Color(0xFF6B7280))),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.check_circle_outline, color: Colors.green),
-                          SizedBox(width: 8),
+                          Icon(
+                            stageDone
+                                ? Icons.check_circle_outline
+                                : Icons.pending_outlined,
+                            color: stageDone ? Colors.green : Colors.orange,
+                          ),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'تم التسليم في الموعد',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                              stageStatusText,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F2937)),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -418,11 +406,19 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
   }
 
   Widget _buildTeamMembersSection() {
-    final leader = _controller.students.firstWhere((s) => s.role == 'قائد الفريق', orElse: () => Student(name: ''));
-    final members = _controller.students.where((s) => s.role != 'قائد الفريق').toList();
-    
+    // قائد الفريق يُحدَّد عبر group_led_id في جدول groups
+    final leaderId = _controller.project?.leaderId;
+    final leader = _controller.students.firstWhere(
+      (s) => s.id == leaderId,
+      orElse: () =>
+          Student(id: leaderId, name: _controller.project?.leaderName ?? ''),
+    );
+    final members =
+        _controller.students.where((s) => s.id != leaderId).toList();
+
     // Sort students: Leader first
-    final sortedStudents = leader.name.isNotEmpty ? [leader, ...members] : members;
+    final sortedStudents =
+        leader.name.isNotEmpty ? [leader, ...members] : members;
 
     return Container(
       padding: const EdgeInsets.all(32),
@@ -461,7 +457,7 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
             itemCount: sortedStudents.length,
             itemBuilder: (context, index) {
               final student = sortedStudents[index];
-              final isLeader = student.role == 'قائد الفريق';
+              final isLeader = student.id == leaderId;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
@@ -485,7 +481,8 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                     const SizedBox(width: 8),
                     if (isLeader)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF2D62ED),
                           borderRadius: BorderRadius.circular(16),
@@ -512,7 +509,8 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
   Widget _buildTimelineSection() {
     final stages = _controller.stages;
     final totalStages = stages.length;
-    int currentStageIndex = stages.lastIndexWhere((s) => s.status == 'completed' || s.status == 'in_progress') + 1;
+    // عدد المراحل المفعّلة على مستوى البرنامج
+    int currentStageIndex = stages.where((s) => s.isActive == true).length;
     if (currentStageIndex == 0 && stages.isNotEmpty) currentStageIndex = 1;
 
     return Container(
@@ -540,11 +538,15 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
             itemCount: stages.length,
             itemBuilder: (context, index) {
               final stage = stages[index];
-              final isActive = stage.status == 'completed' || stage.status == 'in_progress';
+              // التفعيل (stage_isactive) يتحكم بالفتح والتنسيق
+              final isActive = stage.isActive == true;
+              // الاكتمال (من جدول stages statues) يتحكم بأيقونة الصح
+              final isCompleted = stage.status == 'completed';
               final dateStr = stage.startDate != null
-        ? DateFormat('yyyy/MM/dd').format(stage.startDate!)
-        : 'غير محدد';
-              final dateRange = 'من $dateStr إلى ${stage.endDate != null ? DateFormat('yyyy/MM/dd').format(stage.endDate!) : 'غير محدد'}';
+                  ? DateFormat('yyyy/MM/dd').format(stage.startDate!)
+                  : 'غير محدد';
+              final dateRange =
+                  'من $dateStr إلى ${stage.endDate != null ? DateFormat('yyyy/MM/dd').format(stage.endDate!) : 'غير محدد'}';
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
@@ -552,7 +554,9 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                 decoration: BoxDecoration(
                   color: isActive ? const Color(0xFFF0FDF4) : Colors.white,
                   border: Border.all(
-                    color: isActive ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+                    color: isActive
+                        ? const Color(0xFF86EFAC)
+                        : const Color(0xFFE2E8F0),
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -563,10 +567,15 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (isActive)
-                                const Icon(Icons.check_circle_outline, color: Colors.green)
+                              if (isCompleted)
+                                const Icon(Icons.check_circle,
+                                    color: Colors.green)
+                              else if (isActive)
+                                const Icon(Icons.radio_button_checked,
+                                    color: Color(0xFF2D62ED))
                               else
-                                const Icon(Icons.radio_button_unchecked, color: Colors.grey),
+                                const Icon(Icons.lock_outline,
+                                    color: Colors.grey),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -577,7 +586,9 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: isActive ? const Color(0xFF1F2937) : const Color(0xFF9CA3AF),
+                                        color: isActive
+                                            ? const Color(0xFF1F2937)
+                                            : const Color(0xFF9CA3AF),
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -602,12 +613,15 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                                       Navigator.pushReplacement(
                                         context,
                                         PageRouteBuilder(
-                                          pageBuilder: (_, __, ___) => StageDetailsView(
+                                          pageBuilder: (_, __, ___) =>
+                                              StageDetailsView(
                                             stage: stage,
                                             projectId: widget.projectId,
                                             supervisorId: widget.supervisorId,
-                                            supervisorName: widget.supervisorName,
-                                            stageIndex: index + 1, // Pass stage index (1-based)
+                                            supervisorName:
+                                                widget.supervisorName,
+                                            stageIndex: index +
+                                                1, // Pass stage index (1-based)
                                             isGuest: widget.isGuest,
                                           ),
                                           transitionDuration: Duration.zero,
@@ -615,19 +629,28 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                                       );
                                     },
                                     style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(color: Color(0xFF2D62ED)),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      side: const BorderSide(
+                                          color: Color(0xFF2D62ED)),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
                                     ),
-                                    child: const Text('عرض التفاصيل', style: TextStyle(color: Color(0xFF2D62ED))),
+                                    child: const Text('عرض التفاصيل',
+                                        style: TextStyle(
+                                            color: Color(0xFF2D62ED))),
                                   )
                                 : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF3F4F6),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Text('غير مفعلة', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                                    child: const Text('مغلقة',
+                                        style: TextStyle(
+                                            color: Color(0xFF6B7280),
+                                            fontSize: 13)),
                                   ),
                           ),
                         ],
@@ -638,21 +661,29 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                           Expanded(
                             child: Row(
                               children: [
-                                if (isActive)
-                                  const Icon(Icons.check_circle_outline, color: Colors.green)
+                                if (isCompleted)
+                                  const Icon(Icons.check_circle,
+                                      color: Colors.green)
+                                else if (isActive)
+                                  const Icon(Icons.radio_button_checked,
+                                      color: Color(0xFF2D62ED))
                                 else
-                                  const Icon(Icons.radio_button_unchecked, color: Colors.grey),
+                                  const Icon(Icons.lock_outline,
+                                      color: Colors.grey),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         stage.name,
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: isActive ? const Color(0xFF1F2937) : const Color(0xFF9CA3AF),
+                                          color: isActive
+                                              ? const Color(0xFF1F2937)
+                                              : const Color(0xFF9CA3AF),
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -676,12 +707,14 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                                 Navigator.pushReplacement(
                                   context,
                                   PageRouteBuilder(
-                                    pageBuilder: (_, __, ___) => StageDetailsView(
+                                    pageBuilder: (_, __, ___) =>
+                                        StageDetailsView(
                                       stage: stage,
                                       projectId: widget.projectId,
                                       supervisorId: widget.supervisorId,
                                       supervisorName: widget.supervisorName,
-                                      stageIndex: index + 1, // Pass stage index (1-based)
+                                      stageIndex: index +
+                                          1, // Pass stage index (1-based)
                                       isGuest: widget.isGuest,
                                     ),
                                     transitionDuration: Duration.zero,
@@ -689,19 +722,25 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                                 );
                               },
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFF2D62ED)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                side:
+                                    const BorderSide(color: Color(0xFF2D62ED)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                               ),
-                              child: const Text('عرض التفاصيل', style: TextStyle(color: Color(0xFF2D62ED))),
+                              child: const Text('عرض التفاصيل',
+                                  style: TextStyle(color: Color(0xFF2D62ED))),
                             )
                           else
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF3F4F6),
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              child: const Text('غير مفعلة', style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
+                              child: const Text('مغلقة',
+                                  style: TextStyle(
+                                      color: Color(0xFF6B7280), fontSize: 12)),
                             ),
                         ],
                       ),
@@ -718,11 +757,18 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
             child: MediaQuery.of(context).size.width < 600
                 ? Column(
                     children: [
-                      _buildStatItem('نسبة الإنجاز الكلية', '${_controller.project?.progress?.toInt() ?? 0}%', Colors.green),
+                      _buildStatItem(
+                          'نسبة الإنجاز الكلية',
+                          '${_controller.project?.progress?.toInt() ?? 0}%',
+                          Colors.green),
                       const Divider(height: 24),
-                      _buildStatItem('المرحلة الحالية', '$currentStageIndex من $totalStages', const Color(0xFF2D62ED)),
+                      _buildStatItem(
+                          'المرحلة الحالية',
+                          '$currentStageIndex من $totalStages',
+                          const Color(0xFF2D62ED)),
                       const Divider(height: 24),
-                      _buildStatItem('إجمالي المراحل', '$totalStages', const Color(0xFF1F2937)),
+                      _buildStatItem('إجمالي المراحل', '$totalStages',
+                          const Color(0xFF1F2937)),
                     ],
                   )
                 : Row(
@@ -730,23 +776,45 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
                     children: [
                       Column(
                         children: [
-                          const Text('نسبة الإنجاز الكلية', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold)),
+                          const Text('نسبة الإنجاز الكلية',
+                              style: TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
-                          Text('${_controller.project?.progress?.toInt() ?? 0}%', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                          Text(
+                              '${_controller.project?.progress?.toInt() ?? 0}%',
+                              style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green)),
                         ],
                       ),
                       Column(
                         children: [
-                          const Text('المرحلة الحالية', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold)),
+                          const Text('المرحلة الحالية',
+                              style: TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
-                          Text('$currentStageIndex من $totalStages', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D62ED))),
+                          Text('$currentStageIndex من $totalStages',
+                              style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2D62ED))),
                         ],
                       ),
                       Column(
                         children: [
-                          const Text('إجمالي المراحل', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold)),
+                          const Text('إجمالي المراحل',
+                              style: TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
-                          Text('$totalStages', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+                          Text('$totalStages',
+                              style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F2937))),
                         ],
                       ),
                     ],
@@ -761,8 +829,14 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold, fontSize: 14)),
-        Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: valueColor)),
+        Text(label,
+            style: const TextStyle(
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.bold,
+                fontSize: 14)),
+        Text(value,
+            style: TextStyle(
+                fontSize: 22, fontWeight: FontWeight.bold, color: valueColor)),
       ],
     );
   }

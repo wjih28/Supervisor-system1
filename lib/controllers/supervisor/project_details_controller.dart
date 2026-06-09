@@ -15,8 +15,7 @@ class ProjectDetailsController extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   /// تحميل بيانات المشروع
-  Future<void> loadData(
-      {required int projectId, bool isGuest = false}) async {
+  Future<void> loadData({required int projectId, bool isGuest = false}) async {
     _isLoading = true;
     notifyListeners();
 

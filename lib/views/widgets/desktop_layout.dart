@@ -62,12 +62,13 @@ class _DesktopLayoutState extends State<DesktopLayout> {
   }
 
   void _onSidebarItemSelected(int index) {
-    if (!MediaQuery.of(context).size.width.isFinite || MediaQuery.of(context).size.width < 800) {
+    if (!MediaQuery.of(context).size.width.isFinite ||
+        MediaQuery.of(context).size.width < 800) {
       if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
         Navigator.pop(context); // Close drawer
       }
     }
-    
+
     if (index == widget.selectedIndex) return;
 
     // Based on the index, navigate to the corresponding view.
@@ -78,6 +79,8 @@ class _DesktopLayoutState extends State<DesktopLayout> {
           PageRouteBuilder(
             pageBuilder: (_, __, ___) => DashboardView(
               supervisor: widget.supervisor,
+              supervisorId: widget.supervisorId ?? widget.supervisor?.id,
+              supervisorName: widget.supervisorName,
               isGuest: widget.isGuest,
             ),
             transitionDuration: Duration.zero,
@@ -168,7 +171,8 @@ class _DesktopLayoutState extends State<DesktopLayout> {
                   children: [
                     if (isDesktop) ...[
                       _buildSidebar(context),
-                      const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+                      const VerticalDivider(
+                          width: 1, thickness: 1, color: Color(0xFFE2E8F0)),
                     ],
                     Expanded(child: widget.child),
                   ],
@@ -183,7 +187,7 @@ class _DesktopLayoutState extends State<DesktopLayout> {
 
   Widget _buildTopBar(BuildContext context, bool isDesktop) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     // Determine title text based on width to prevent overflow
     String titleText = 'نظام إدارة ومتابعة أبحاث التخرج';
     if (screenWidth < 600) {
@@ -237,7 +241,7 @@ class _DesktopLayoutState extends State<DesktopLayout> {
             ),
           ),
           const SizedBox(width: 8),
-          
+
           // Left Side: Notifications, Name/Role, Avatar, Logout
           Row(
             children: [
@@ -247,11 +251,13 @@ class _DesktopLayoutState extends State<DesktopLayout> {
                 alignment: Alignment.center,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications_none, color: Color(0xFF718096), size: 22),
+                    icon: const Icon(Icons.notifications_none,
+                        color: Color(0xFF718096), size: 22),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () async {
-                      final supervisorId = widget.supervisorId ?? widget.supervisor?.id ?? 0;
+                      final supervisorId =
+                          widget.supervisorId ?? widget.supervisor?.id ?? 0;
                       await Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -293,10 +299,11 @@ class _DesktopLayoutState extends State<DesktopLayout> {
                 ],
               ),
               const SizedBox(width: 8),
-              
+
               // Name & Role Column
               ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: screenWidth < 400 ? 80 : 110),
+                constraints:
+                    BoxConstraints(maxWidth: screenWidth < 400 ? 80 : 110),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -304,7 +311,7 @@ class _DesktopLayoutState extends State<DesktopLayout> {
                     Text(
                       'د. ${_getShortName(widget.supervisorName)}',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold, 
+                        fontWeight: FontWeight.bold,
                         fontSize: screenWidth < 400 ? 10 : 12,
                       ),
                       maxLines: 1,
@@ -313,7 +320,7 @@ class _DesktopLayoutState extends State<DesktopLayout> {
                     Text(
                       widget.isGuest ? 'عرض الضيف' : 'المشرف الأكاديمي',
                       style: TextStyle(
-                        color: const Color(0xFF718096), 
+                        color: const Color(0xFF718096),
                         fontSize: screenWidth < 400 ? 8 : 10,
                       ),
                       maxLines: 1,
@@ -323,14 +330,15 @@ class _DesktopLayoutState extends State<DesktopLayout> {
                 ),
               ),
               const SizedBox(width: 8),
-              
+
               // Avatar
               CircleAvatar(
                 radius: 16,
                 backgroundColor: const Color(0xFFF3F4F6),
                 child: Image.asset(
                   'assets/images/avatar_placeholder.png',
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, color: Colors.grey, size: 18),
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.person, color: Colors.grey, size: 18),
                 ),
               ),
               const SizedBox(width: 4),
@@ -351,15 +359,19 @@ class _DesktopLayoutState extends State<DesktopLayout> {
           _buildSidebarItem(0, Icons.grid_view_rounded, 'لوحة التحكم'),
           _buildSidebarItem(1, Icons.people_outline, 'إدارة المجموعات'),
           _buildSidebarItem(2, Icons.chat_bubble_outline, 'الدردشات'),
-          _buildSidebarItem(3, Icons.edit_note_rounded, 'إدخال الدرجات النهائية'),
+          _buildSidebarItem(
+              3, Icons.edit_note_rounded, 'إدخال الدرجات النهائية'),
           _buildSidebarItem(4, Icons.settings, 'الإعدادات'),
           const SizedBox(height: 8),
           const Divider(height: 1),
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            title: const Text('تسجيل الخروج',
+                style:
+                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             onTap: () async {
               try {
                 await Supabase.instance.client.auth.signOut();

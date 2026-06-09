@@ -18,10 +18,10 @@ class AppNotification {
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
-      id: json["notif_id"],
+      id: json["notification_id"],
       supervisorId: json["id_sprvsr"],
-      title: json["notif_title"],
-      message: json["notif_message"],
+      title: json["notification_title"] ?? "",
+      message: json["notification_message"] ?? "",
       createdAt: json["created_at"] != null
           ? DateTime.parse(json["created_at"])
           : null,
@@ -32,8 +32,8 @@ class AppNotification {
   Map<String, dynamic> toJson() {
     return {
       "id_sprvsr": supervisorId,
-      "notif_title": title,
-      "notif_message": message,
+      "notification_title": title,
+      "notification_message": message,
       "is_read": isRead,
     };
   }

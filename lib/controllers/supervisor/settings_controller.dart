@@ -43,10 +43,12 @@ class SettingsController extends ChangeNotifier {
         phoneController.text = _settings?.phoneNumber ?? '';
         employeeIdController.text = _settings?.employeeId ?? '';
         if (supervisor.programId != null) {
-          final program = await SupabaseService.getProgramById(supervisor.programId!);
+          final program =
+              await SupabaseService.getProgramById(supervisor.programId!);
           if (program != null) {
             programController.text = program.name;
-            final department = await SupabaseService.getDepartmentById(program.departmentId ?? 0);
+            final department = await SupabaseService.getDepartmentById(
+                program.departmentId ?? 0);
             departmentController.text = department?.name ?? '';
           }
         }
@@ -73,7 +75,8 @@ class SettingsController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final updated = _settings!.copyWith(phoneNumber: phone, employeeId: employeeId);
+      final updated =
+          _settings!.copyWith(phoneNumber: phone, employeeId: employeeId);
       return await SupabaseService.updateSupervisorSettings(updated);
     } catch (e) {
       debugPrint('Error saving settings: $e');
@@ -97,7 +100,8 @@ class SettingsController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      return await SupabaseService.updateSupervisorPassword(supervisor.id!, newPassword);
+      return await SupabaseService.updateSupervisorPassword(
+          supervisor.id!, newPassword);
     } catch (e) {
       debugPrint('Error updating password: $e');
       return false;

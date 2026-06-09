@@ -7,6 +7,7 @@ export 'project_file.dart';
 export 'review_comment.dart';
 export 'project_feedback.dart';
 export 'project_stage.dart';
+export 'stage_info.dart';
 export 'program.dart';
 export 'department.dart';
 export 'app_notification.dart';

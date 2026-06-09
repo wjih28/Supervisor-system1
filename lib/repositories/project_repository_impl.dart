@@ -78,11 +78,13 @@ class ProjectRepositoryImpl implements ProjectRepository {
 
   @override
   Future<bool> submitGrade(int projectId, double total, String comment) async {
+    // ملاحظة: الدرجات تُحفظ لكل طالب عبر SupabaseService.saveStudentGrades
+    // (جدول student_grades). لا يوجد جدول درجات على مستوى المجموعة.
     try {
-      await Supabase.instance.client.from('project_grades').insert({
+      await Supabase.instance.client.from('program_manager_grades').insert({
         'id_group': projectId,
-        'total_grade': total,
-        'comment': comment,
+        'supervisor_grade': total,
+        'notes': comment,
       });
       return true;
     } catch (e) {
