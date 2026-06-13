@@ -61,6 +61,9 @@ class _SettingsViewState extends State<SettingsView> {
     }
     final success = await _controller.saveSettings(
       isGuest: widget.isGuest,
+      supervisor: widget.supervisor,
+      name: _nameController.text,
+      email: _emailController.text,
       phone: _phoneController.text,
       employeeId: _employeeIdController.text,
     );
@@ -332,8 +335,8 @@ class _SettingsViewState extends State<SettingsView> {
           const SizedBox(height: 32),
           _buildResponsiveRow(
             _buildTextField('البريد الإلكتروني', _emailController,
-                enabled: false),
-            _buildTextField('الاسم الكامل', _nameController, enabled: false),
+                enabled: true),
+            _buildTextField('الاسم الكامل', _nameController, enabled: true),
             isDesktop,
           ),
           const SizedBox(height: 20),

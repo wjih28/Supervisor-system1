@@ -817,6 +817,20 @@ class SupabaseService {
 
   // ============ الإعدادات ============
 
+  static Future<bool> updateSupervisor(
+      int supervisorId, String name, String email) async {
+    try {
+      await client.from('supervisor').update({
+        'sprvsr_name': name,
+        'sprvsr_email': email,
+      }).eq('sprvsr_id', supervisorId);
+      return true;
+    } catch (e) {
+      debugPrint('Error updating supervisor: $e');
+      return false;
+    }
+  }
+
   static Future<SupervisorSettings?> getSupervisorSettings(
       int supervisorId) async {
     try {

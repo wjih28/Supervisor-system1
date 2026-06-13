@@ -486,7 +486,7 @@ class _DashboardViewState extends State<DashboardView> {
           ),
           const SizedBox(height: 16),
           Align(
-            alignment: isCount ? Alignment.bottomLeft : Alignment.center,
+            alignment: Alignment.center,
             child: Text(
               value,
               style: TextStyle(
@@ -494,7 +494,7 @@ class _DashboardViewState extends State<DashboardView> {
                 fontSize: isCount ? 48 : 24,
                 fontWeight: FontWeight.bold,
               ),
-              textAlign: isCount ? TextAlign.left : TextAlign.center,
+              textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
             ),

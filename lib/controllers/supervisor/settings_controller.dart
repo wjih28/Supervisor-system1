@@ -36,8 +36,8 @@ class SettingsController extends ChangeNotifier {
         departmentController.text = 'إدارة الأعمال';
         programController.text = 'إدارة أعمال دولية';
       } else {
-        _settings = await SupabaseService.getSupervisorSettings(supervisor.id!);
-        _settings ??= SupervisorSettings(supervisorId: supervisor.id!);
+        // _settings = await SupabaseService.getSupervisorSettings(supervisor.id!);
+        _settings = SupervisorSettings(supervisorId: supervisor.id!);
         nameController.text = supervisor.name;
         emailController.text = supervisor.email ?? '';
         phoneController.text = _settings?.phoneNumber ?? '';
@@ -68,6 +68,9 @@ class SettingsController extends ChangeNotifier {
 
   Future<bool> saveSettings({
     required bool isGuest,
+    required Supervisor supervisor,
+    required String name,
+    required String email,
     required String phone,
     required String employeeId,
   }) async {
@@ -75,9 +78,10 @@ class SettingsController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final updated =
-          _settings!.copyWith(phoneNumber: phone, employeeId: employeeId);
-      return await SupabaseService.updateSupervisorSettings(updated);
+      // We only update the Supervisor table fields (name, email).
+      // phone and employeeId are kept in local state but not saved to DB since they don't exist in Supervisor table.
+      _settings = _settings!.copyWith(phoneNumber: phone, employeeId: employeeId);
+      return await SupabaseService.updateSupervisor(supervisor.id!, name, email);
     } catch (e) {
       debugPrint('Error saving settings: $e');
       return false;

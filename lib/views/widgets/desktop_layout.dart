@@ -332,13 +332,16 @@ class _DesktopLayoutState extends State<DesktopLayout> {
               const SizedBox(width: 8),
 
               // Avatar
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: const Color(0xFFF3F4F6),
-                child: Image.asset(
-                  'assets/images/avatar_placeholder.png',
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.person, color: Colors.grey, size: 18),
+              GestureDetector(
+                onTap: () => _onSidebarItemSelected(4),
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: const Color(0xFFF3F4F6),
+                  child: Image.asset(
+                    'assets/images/avatar_placeholder.png',
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.person, color: Colors.grey, size: 18),
+                  ),
                 ),
               ),
               const SizedBox(width: 4),
