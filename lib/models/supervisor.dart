@@ -6,6 +6,7 @@ class Supervisor {
   final String? username;
   final bool? isActive;
   final int? programId;
+  final String? supervisPhoto;
 
   Supervisor({
     this.id,
@@ -15,6 +16,7 @@ class Supervisor {
     this.username,
     this.isActive,
     this.programId,
+    this.supervisPhoto,
   });
 
   factory Supervisor.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class Supervisor {
       username: json["sprvsr_username"],
       isActive: json["sprvsr_isactive"],
       programId: json["program_id"],
+      supervisPhoto: json["supervis_photo"],
     );
   }
 
@@ -37,6 +40,7 @@ class Supervisor {
       "sprvsr_username": username,
       "sprvsr_isactive": isActive,
       "program_id": programId,
+      if (supervisPhoto != null) "supervis_photo": supervisPhoto,
     };
   }
 }

@@ -122,10 +122,10 @@ class _ChatsViewState extends State<ChatsView> {
 
   Widget _buildPageHeader() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'الدردشات',
@@ -185,45 +185,40 @@ class _ChatsViewState extends State<ChatsView> {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      // Badge
-                      if (chat.unreadCount > 0)
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                              color: Color(0xFF2D62ED), shape: BoxShape.circle),
-                          child: Text(
-                            chat.unreadCount.toString(),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        )
-                      else
-                        const SizedBox(width: 20),
+                      // Avatar
+                      const CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Color(0xFFDBEAFE),
+                        child: Icon(Icons.person, color: Color(0xFF2D62ED)),
+                      ),
 
                       const SizedBox(width: 12),
 
                       // Texts
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                Expanded(
+                                  child: Text(
+                                    chat.name,
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2D3748)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 Text(
                                   chat.time,
                                   style: TextStyle(
                                       color: Colors.grey.shade500,
                                       fontSize: 12),
-                                ),
-                                Text(
-                                  chat.name,
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2D3748)),
                                 ),
                               ],
                             ),
@@ -233,6 +228,8 @@ class _ChatsViewState extends State<ChatsView> {
                               style: const TextStyle(
                                   fontSize: 12, color: Color(0xFFA0AEC0)),
                               textAlign: TextAlign.right,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (chat.lastMessage.isNotEmpty) ...[
                               const SizedBox(height: 4),
@@ -251,12 +248,22 @@ class _ChatsViewState extends State<ChatsView> {
 
                       const SizedBox(width: 12),
 
-                      // Avatar
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Color(0xFFDBEAFE),
-                        child: Icon(Icons.person, color: Color(0xFF2D62ED)),
-                      ),
+                      // Badge
+                      if (chat.unreadCount > 0)
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                              color: Color(0xFF2D62ED), shape: BoxShape.circle),
+                          child: Text(
+                            chat.unreadCount.toString(),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 20),
                     ],
                   ),
                 ),
@@ -293,25 +300,30 @@ class _ChatsViewState extends State<ChatsView> {
                   icon: const Icon(Icons.arrow_back, color: Color(0xFF2D3748)),
                   onPressed: () => _controller.selectChat(null),
                 ),
-              const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(chat.name,
-                      style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2D3748))),
-                  Text(chat.projectName,
-                      style:
-                          TextStyle(fontSize: 14, color: Colors.grey.shade500)),
-                ],
-              ),
-              const SizedBox(width: 16),
               const CircleAvatar(
                 radius: 24,
                 backgroundColor: Color(0xFFDBEAFE),
                 child: Icon(Icons.person, color: Color(0xFF2D62ED)),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(chat.name,
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D3748)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    Text(chat.projectName,
+                        style:
+                            TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
             ],
           ),
@@ -345,17 +357,6 @@ class _ChatsViewState extends State<ChatsView> {
           ),
           child: Row(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2D62ED),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white),
-                  onPressed: _sendMessage,
-                ),
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: TextField(
                   controller: _messageController,
@@ -372,6 +373,17 @@ class _ChatsViewState extends State<ChatsView> {
                         borderSide: BorderSide.none),
                   ),
                   onSubmitted: (_) => _sendMessage(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2D62ED),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.send, color: Colors.white),
+                  onPressed: _sendMessage,
                 ),
               ),
             ],
@@ -409,7 +421,7 @@ class _ChatsViewState extends State<ChatsView> {
             ),
             constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   msg.text,
@@ -420,14 +432,14 @@ class _ChatsViewState extends State<ChatsView> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (msg.isMe) ...[
+                      _buildStatusTick(msg.status),
+                      const SizedBox(width: 4),
+                    ],
                     Text(
                       msg.time,
                       style: TextStyle(color: timeColor, fontSize: 10),
                     ),
-                    if (msg.isMe) ...[
-                      const SizedBox(width: 4),
-                      _buildStatusTick(msg.status),
-                    ],
                   ],
                 ),
               ],

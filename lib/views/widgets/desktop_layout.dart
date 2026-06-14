@@ -337,11 +337,16 @@ class _DesktopLayoutState extends State<DesktopLayout> {
                 child: CircleAvatar(
                   radius: 16,
                   backgroundColor: const Color(0xFFF3F4F6),
-                  child: Image.asset(
-                    'assets/images/avatar_placeholder.png',
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.person, color: Colors.grey, size: 18),
-                  ),
+                  backgroundImage: widget.supervisor?.supervisPhoto != null && widget.supervisor!.supervisPhoto!.isNotEmpty
+                      ? NetworkImage(widget.supervisor!.supervisPhoto!)
+                      : null,
+                  child: (widget.supervisor?.supervisPhoto == null || widget.supervisor!.supervisPhoto!.isEmpty)
+                      ? Image.asset(
+                          'assets/images/avatar_placeholder.png',
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.person, color: Colors.grey, size: 18),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(width: 4),

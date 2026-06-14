@@ -281,15 +281,35 @@ class _SettingsViewState extends State<SettingsView> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: const Text('تغيير الصورة',
-                              style: TextStyle(color: Color(0xFF4A5568))),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            OutlinedButton(
+                              onPressed: () => _controller.pickAndUploadImage(
+                                  widget.supervisor, widget.isGuest, context),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.grey.shade300),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: Text(_controller.supervisPhoto != null ? 'تغيير الصورة' : 'إضافة صورة',
+                                  style: const TextStyle(color: Color(0xFF4A5568))),
+                            ),
+                            if (_controller.supervisPhoto != null) ...[
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: () => _controller.deleteImage(
+                                    widget.supervisor, widget.isGuest, context),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Colors.red),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('حذف الصورة',
+                                    style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 4),
                         const Text('JPG, PNG أو GIF (الحد الأقصى 2 ميجابايت)',
@@ -297,32 +317,62 @@ class _SettingsViewState extends State<SettingsView> {
                       ],
                     ),
                     const SizedBox(width: 24),
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 40,
-                      backgroundColor: Color(0xFFDBEAFE),
-                      child: Icon(Icons.person,
-                          size: 40, color: Color(0xFF2D62ED)),
+                      backgroundColor: const Color(0xFFDBEAFE),
+                      backgroundImage: _controller.supervisPhoto != null
+                          ? NetworkImage(_controller.supervisPhoto!)
+                          : null,
+                      child: _controller.supervisPhoto == null
+                          ? const Icon(Icons.person,
+                              size: 40, color: Color(0xFF2D62ED))
+                          : null,
                     ),
                   ],
                 )
               : Column(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 40,
-                      backgroundColor: Color(0xFFDBEAFE),
-                      child: Icon(Icons.person,
-                          size: 40, color: Color(0xFF2D62ED)),
+                      backgroundColor: const Color(0xFFDBEAFE),
+                      backgroundImage: _controller.supervisPhoto != null
+                          ? NetworkImage(_controller.supervisPhoto!)
+                          : null,
+                      child: _controller.supervisPhoto == null
+                          ? const Icon(Icons.person,
+                              size: 40, color: Color(0xFF2D62ED))
+                          : null,
                     ),
                     const SizedBox(height: 16),
-                    OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.grey.shade300),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text('تغيير الصورة',
-                          style: TextStyle(color: Color(0xFF4A5568))),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => _controller.pickAndUploadImage(
+                              widget.supervisor, widget.isGuest, context),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: Text(_controller.supervisPhoto != null ? 'تغيير الصورة' : 'إضافة صورة',
+                              style: const TextStyle(color: Color(0xFF4A5568))),
+                        ),
+                        if (_controller.supervisPhoto != null) ...[
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () => _controller.deleteImage(
+                                widget.supervisor, widget.isGuest, context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.red),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: const Text('حذف الصورة',
+                                style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 8),
                     const Text(

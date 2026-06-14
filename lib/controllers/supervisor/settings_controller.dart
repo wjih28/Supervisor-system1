@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../services/supabase_service.dart';
@@ -6,9 +10,11 @@ import '../../services/supabase_service.dart';
 class SettingsController extends ChangeNotifier {
   bool _isLoading = true;
   SupervisorSettings? _settings;
+  String? _supervisPhoto;
 
   bool get isLoading => _isLoading;
   SupervisorSettings? get settings => _settings;
+  String? get supervisPhoto => _supervisPhoto;
 
   Future<void> loadSettings({
     required Supervisor supervisor,
@@ -23,6 +29,7 @@ class SettingsController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      _supervisPhoto = supervisor.supervisPhoto;
       if (isGuest) {
         _settings = SupervisorSettings(
           supervisorId: supervisor.id!,
@@ -109,6 +116,108 @@ class SettingsController extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error updating password: $e');
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> pickAndUploadImage(Supervisor supervisor, bool isGuest, BuildContext context) async {
+    if (isGuest) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('عرض الضيف: تغيير الصورة غير متاح')),
+      );
+      return;
+    }
+
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image != null) {
+        _isLoading = true;
+        notifyListeners();
+
+        final fileBytes = await image.readAsBytes();
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+        
+        final String path = '${supervisor.id}/$fileName';
+
+        if (kIsWeb) {
+          await Supabase.instance.client.storage
+              .from('supervisor_photo')
+              .uploadBinary(path, fileBytes);
+        } else {
+          final file = File(image.path);
+          await Supabase.instance.client.storage
+              .from('supervisor_photo')
+              .upload(path, file);
+        }
+
+        final photoUrl = Supabase.instance.client.storage
+            .from('supervisor_photo')
+            .getPublicUrl(path);
+
+        final success = await SupabaseService.updateSupervisorPhoto(
+            supervisor.id!, photoUrl);
+
+        if (success) {
+          _supervisPhoto = photoUrl;
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('تم رفع الصورة بنجاح')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('حدث خطأ أثناء رفع الصورة')),
+        );
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteImage(Supervisor supervisor, bool isGuest, BuildContext context) async {
+    if (isGuest) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('عرض الضيف: تغيير الصورة غير متاح')),
+      );
+      return;
+    }
+
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final success = await SupabaseService.updateSupervisorPhoto(
+          supervisor.id!, null);
+
+      if (success) {
+        _supervisPhoto = null;
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم حذف الصورة بنجاح')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('حدث خطأ أثناء حذف الصورة')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting image: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('حدث خطأ أثناء حذف الصورة')),
+        );
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

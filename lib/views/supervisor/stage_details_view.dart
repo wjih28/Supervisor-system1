@@ -12,7 +12,8 @@ class StageDetailsView extends StatefulWidget {
   final int supervisorId;
   final String supervisorName;
   final bool isGuest;
-  final int stageIndex; // ترتيب المرحلة في القائمة (احتياطي إن خلا الاسم من رقم)
+  final int
+      stageIndex; // ترتيب المرحلة في القائمة (احتياطي إن خلا الاسم من رقم)
 
   const StageDetailsView({
     super.key,
@@ -44,8 +45,7 @@ class _StageDetailsViewState extends State<StageDetailsView> {
   // ملاحظات المرحلة 5 (ملاحظة لكل قسم — title_id)
   final Map<int, TextEditingController> _s5Notes = {};
 
-  // اعتماد عناصر المرحلة 2 (حالة عرض محلية — لا يوجد عمود اعتماد لكل عنصر)
-  final Set<int> _approvedTitles = {};
+  // حالة عرض محلية (لم يعد هناك اعتماد فردي)
 
   @override
   void initState() {
@@ -83,12 +83,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     final s4 = _controller.stage4;
     if (s4 != null) _s4NotesCtrl.text = s4.supervisorNotes ?? '';
     for (final sec in _controller.stage5Sections) {
-      _s5Notes.putIfAbsent(
-          sec.titleId, () => TextEditingController(text: sec.supervisorNote ?? ''));
-    }
-    if (_controller.stage2?.stageApproval == true) {
-      _approvedTitles
-          .addAll(List.generate(_controller.stage2Titles.length, (i) => i));
+      _s5Notes.putIfAbsent(sec.titleId,
+          () => TextEditingController(text: sec.supervisorNote ?? ''));
     }
   }
 
@@ -150,12 +146,12 @@ class _StageDetailsViewState extends State<StageDetailsView> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        messenger
-            .showSnackBar(const SnackBar(content: Text('لا يمكن فتح الرابط حالياً')));
+        messenger.showSnackBar(
+            const SnackBar(content: Text('لا يمكن فتح الرابط حالياً')));
       }
     } catch (_) {
-      messenger
-          .showSnackBar(const SnackBar(content: Text('حدث خطأ أثناء فتح الملف')));
+      messenger.showSnackBar(
+          const SnackBar(content: Text('حدث خطأ أثناء فتح الملف')));
     }
   }
 
@@ -413,7 +409,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                 child: ElevatedButton.icon(
                   onPressed: _controller.isSaving
                       ? null
-                      : () => _handle(() => _controller.setStage1Approval(false),
+                      : () => _handle(
+                          () => _controller.setStage1Approval(false),
                           'تم رفض البحث'),
                   icon: const Icon(Icons.cancel_outlined, color: Colors.white),
                   label: const Text('رفض البحث',
@@ -477,40 +474,92 @@ class _StageDetailsViewState extends State<StageDetailsView> {
           ),
         const SizedBox(height: 24),
         _buildStageRequirementsCard(),
+        const SizedBox(height: 24),
+        _buildStage2ApprovalCard(),
       ],
     );
   }
 
-  Widget _buildStageSummaryCard() {
-    final total = _controller.stage2Titles.length;
-    final approved = _approvedTitles.length;
-    final pct = total == 0 ? 0.0 : approved / total;
+  Widget _buildStage2ApprovalCard() {
+    final approval = _controller.stage2?.stageApproval;
     return _buildCard(
-      title: 'ملخص اعتماد المرحلة',
+      title: 'اعتماد المرحلة',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (approval != null) ...[
+            _buildStatusChip(
+              approval ? 'تم اعتماد الخطة' : 'تم رفض الخطة',
+              approval,
+            ),
+            const SizedBox(height: 16),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _controller.isSaving
+                      ? null
+                      : () => _handle(() => _controller.setStage2Approval(false),
+                          'تم رفض الخطة'),
+                  icon: const Icon(Icons.cancel_outlined, color: Colors.white),
+                  label: const Text('رفض الخطة',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _controller.isSaving
+                      ? null
+                      : () => _handle(() => _controller.setStage2Approval(true),
+                          'تم اعتماد الخطة'),
+                  icon: const Icon(Icons.check_circle_outline,
+                      color: Colors.white),
+                  label: const Text('اعتماد الخطة',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _getNotesCount() {
+    final noteStr = _controller.stage2?.supervisorNote?.trim() ?? '';
+    if (noteStr.isEmpty) return 0;
+    return noteStr.split('\n').where((s) => s.trim().isNotEmpty).length;
+  }
+
+  Widget _buildStageSummaryCard() {
+    final notesCount = _getNotesCount();
+    return _buildCard(
+      title: 'ملخص التعديلات',
       child: Column(
         children: [
           const SizedBox(height: 16),
-          Text('$approved/$total',
+          Text('$notesCount',
               style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937))),
-          const Text('عناصر معتمدة',
+                  color: Color(0xFFF59E0B))),
+          const Text('ملاحظات مرسلة للتعديل',
               style: TextStyle(color: Color(0xFF6B7280))),
           const SizedBox(height: 24),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: pct,
-              backgroundColor: const Color(0xFFE5E7EB),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
-              minHeight: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text('${(pct * 100).round()}% مكتمل',
-              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
         ],
       ),
     );
@@ -591,9 +640,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
             )
           : Column(
               children: titles.asMap().entries.map((entry) {
-                final index = entry.key;
                 final title = entry.value;
-                final isApproved = _approvedTitles.contains(index);
+                final isApproved = _controller.stage2?.stageApproval == true;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -609,19 +657,19 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                             : const Color(0xFFFDE68A)),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  child: Row(
                     children: [
-                      SizedBox(
-                        width: MediaQuery.of(context).size.width < 600
-                            ? double.infinity
-                            : 200,
+                      Icon(Icons.check_circle_outline,
+                          color: isApproved
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFF59E0B)),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(title,
                             style:
                                 const TextStyle(fontWeight: FontWeight.bold)),
                       ),
+                      const SizedBox(width: 8),
                       OutlinedButton.icon(
                         onPressed: () => _showNeedsEditDialog(context, title),
                         icon: const Icon(Icons.info_outline,
@@ -631,30 +679,6 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                         style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFFF59E0B))),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          setState(() => _approvedTitles.add(index));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('تم اعتماد العنصر'),
-                              backgroundColor: Colors.green,
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.check_circle_outline, size: 16),
-                        label: const Text('اعتماد'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isApproved
-                              ? const Color(0xFF10B981)
-                              : const Color(0xFF9CA3AF),
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                      Icon(Icons.check_circle_outline,
-                          color: isApproved
-                              ? const Color(0xFF10B981)
-                              : const Color(0xFFF59E0B)),
                     ],
                   ),
                 );
@@ -676,7 +700,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
   }
 
   Widget _buildDiscussionStatusCard() {
-    final pct = ((_controller.stage3?.discussionPercent ?? 0) / 100).clamp(0.0, 1.0);
+    final pct =
+        ((_controller.stage3?.discussionPercent ?? 0) / 100).clamp(0.0, 1.0);
     return _buildCard(
       title: 'حالة مناقشة الخطة',
       child: Padding(
@@ -1230,8 +1255,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                     value: pct,
                     strokeWidth: 10,
                     backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFF10B981)),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
                   ),
                   Center(
                     child: Text('${(pct * 100).round()}%',
@@ -1336,8 +1361,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                   }
                   Navigator.pop(dialogContext);
                   await _handle(
-                    () => _controller.addStage2TitleNote(
-                        requirementTitle, note),
+                    () =>
+                        _controller.addStage2TitleNote(requirementTitle, note),
                     'تم إرسال الملاحظة بنجاح',
                   );
                 },

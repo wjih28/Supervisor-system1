@@ -880,6 +880,19 @@ class SupabaseService {
     }
   }
 
+  static Future<bool> updateSupervisorPhoto(
+      int supervisorId, String? photoUrl) async {
+    try {
+      await client.from('supervisor').update({
+        'supervis_photo': photoUrl,
+      }).eq('sprvsr_id', supervisorId);
+      return true;
+    } catch (e) {
+      debugPrint('Error updating supervisor photo: $e');
+      return false;
+    }
+  }
+
   // ============ الإشعارات ============
 
   static Future<List<AppNotification>> getNotifications(
