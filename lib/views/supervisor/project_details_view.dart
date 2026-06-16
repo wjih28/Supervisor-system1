@@ -537,7 +537,7 @@ class _ProjectDetailsViewState extends State<ProjectDetailsView> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: stages.length,
             itemBuilder: (context, index) {
-              final stage = stages[index];
+              final stage = stages.reversed.toList()[index];
               // التفعيل (stage_isactive) يتحكم بالفتح والتنسيق
               final isActive = stage.isActive == true;
               // الاكتمال (من جدول stages statues) يتحكم بأيقونة الصح

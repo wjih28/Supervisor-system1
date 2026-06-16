@@ -639,7 +639,7 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                   style: TextStyle(color: Color(0xFF6B7280))),
             )
           : Column(
-              children: titles.asMap().entries.map((entry) {
+              children: titles.reversed.toList().asMap().entries.map((entry) {
                 final title = entry.value;
                 final isApproved = _controller.stage2?.stageApproval == true;
 
@@ -1086,7 +1086,7 @@ class _StageDetailsViewState extends State<StageDetailsView> {
             ),
           )
         else
-          ...sections.map((s) => Padding(
+          ...sections.reversed.map((s) => Padding(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: _buildStage5SectionCard(s),
               )),
@@ -1232,51 +1232,170 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     );
   }
 
-  /// نسبة إنجاز المرحلة الخامسة محسوبة تلقائياً = الأقسام المعتمدة ÷ إجمالي الأقسام (عرض فقط).
+  /// نسبة إنجاز المرحلة الخامسة محسوبة تلقائياً = الفصول المعتمدة ÷ إجمالي الفصول (عرض فقط).
   Widget _buildStage5ProgressCard() {
     final sections = _controller.stage5Sections;
     final total = sections.length;
     final approved = sections.where((s) => s.approval == true).length;
+    final underReview = sections
+        .where((s) => s.approval == null && s.pdfFile != null && s.pdfFile!.isNotEmpty)
+        .length;
+    final rejected = sections.where((s) => s.approval == false).length;
     final pct = total == 0 ? 0.0 : approved / total;
-    return _buildCard(
-      title: 'نسبة إنجاز المرحلة',
-      icon: Icons.percent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Center(
-            child: SizedBox(
-              width: 100,
-              height: 100,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CircularProgressIndicator(
-                    value: pct,
-                    strokeWidth: 10,
-                    backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+    final pctInt = (pct * 100).round();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 0),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // الصف العلوي: النسبة الكبيرة يسار + العنوان والوصف يمين
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // النسبة المئوية الكبيرة
+                Text(
+                  '$pctInt%',
+                  style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D62ED),
                   ),
-                  Center(
-                    child: Text('${(pct * 100).round()}%',
-                        style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1F2937))),
-                  ),
-                ],
-              ),
+                ),
+                // العنوان والوصف الفرعي
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'نسبة الإنجاز',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E3A5F),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$approved من $total فصول معتمدة',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 16),
-          Text('$approved من $total أقسام معتمدة',
-              style: const TextStyle(
-                  color: Color(0xFF6B7280), fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          const Text('تُحسب النسبة تلقائياً بحسب الأقسام المعتمدة',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
-        ],
+            const SizedBox(height: 20),
+            // شريط التقدم الأفقي
+            Row(
+              children: [
+                Text(
+                  '$pctInt%',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D62ED),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      backgroundColor: const Color(0xFFD1D5DB),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF2D62ED)),
+                      minHeight: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(color: Color(0xFFBFDBFE)),
+            const SizedBox(height: 16),
+            // الإحصاءات الثلاث في الأسفل
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                // معتمد
+                Column(
+                  children: [
+                    Text(
+                      '$approved',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'معتمد',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+                // قيد المراجعة
+                Column(
+                  children: [
+                    Text(
+                      '$underReview',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFF59E0B),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'قيد المراجعة',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+                // مرفوض
+                Column(
+                  children: [
+                    Text(
+                      '$rejected',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFDC2626),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'مرفوض',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -338,7 +338,7 @@ class _ChatsViewState extends State<ChatsView> {
               padding: const EdgeInsets.all(24),
               itemCount: chat.messages.length,
               itemBuilder: (context, index) {
-                final msg = chat.messages[index];
+                final msg = chat.messages.reversed.toList()[index];
                 return _buildMessageBubble(msg);
               },
             ),

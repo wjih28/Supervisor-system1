@@ -1105,6 +1105,30 @@ class SupabaseService {
         .order('created_at');
   }
 
+  static Future<bool> updateMessagesStatus(int chatId, String status) async {
+    try {
+      if (status == 'delivered') {
+        await client
+            .from('messages')
+            .update({'message_status': 'delivered'})
+            .eq('id_chat', chatId)
+            .neq('sender_role', 'supervisor')
+            .eq('message_status', 'sent');
+      } else if (status == 'read') {
+        await client
+            .from('messages')
+            .update({'message_status': 'read'})
+            .eq('id_chat', chatId)
+            .neq('sender_role', 'supervisor')
+            .neq('message_status', 'read');
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error updating message status: $e');
+      return false;
+    }
+  }
+
   // ============ التحديث اللحظي للمراحل (Realtime) ============
 
   /// (اسم الجدول، عمود المجموعة) لكل مرحلة — تُستخدم للاشتراك اللحظي.
@@ -1141,5 +1165,82 @@ class SupabaseService {
 
   static void removeChannel(RealtimeChannel channel) {
     client.removeChannel(channel);
+  }
+
+  /// الاشتراك في الرسائل الجديدة (INSERT) لمحادثة بعينها —
+  /// يُستخدم لتحديث معاينة قائمة المحادثات للمحادثات غير المفتوحة.
+  static RealtimeChannel subscribeMessagesForChat(
+      int chatId, void Function(Map<String, dynamic> newMsg) onNew) {
+    final channel = client.channel('msg_insert_$chatId');
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.insert,
+      schema: 'public',
+      table: 'messages',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'id_chat',
+        value: chatId,
+      ),
+      callback: (payload) => onNew(payload.newRecord),
+    );
+    channel.subscribe();
+    return channel;
+  }
+
+  /// الاشتراك في تغييرات جدول chats لمشرف معين
+  static RealtimeChannel subscribeSupervisorChats(
+      int supervisorId, void Function() onChange) {
+    final channel = client.channel('chats_$supervisorId');
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'chats',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'id_sprvsr',
+        value: supervisorId,
+      ),
+      callback: (_) => onChange(),
+    );
+    channel.subscribe();
+    return channel;
+  }
+
+  /// الاشتراك في تغييرات جدول groups لمشرف معين (يفيد في حالة تغير نسبة الإنجاز)
+  static RealtimeChannel subscribeSupervisorGroups(
+      int supervisorId, void Function() onChange) {
+    final channel = client.channel('groups_sprvsr_$supervisorId');
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'groups',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'id_sprvsr',
+        value: supervisorId,
+      ),
+      callback: (_) => onChange(),
+    );
+    channel.subscribe();
+    return channel;
+  }
+
+  /// الاشتراك في جدول states statues لمجموعة محددة (لمعرفة تغيرات نسبة الإنجاز لكل مرحلة)
+  static RealtimeChannel subscribeProjectStages(
+      int groupId, void Function() onChange) {
+    final channel = client.channel('stages_statues_$groupId');
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'stages statues',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'id_group',
+        value: groupId,
+      ),
+      callback: (_) => onChange(),
+    );
+    channel.subscribe();
+    return channel;
   }
 }

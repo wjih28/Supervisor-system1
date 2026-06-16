@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../models/models.dart';
 import '../../services/supabase_service.dart';
 
@@ -6,6 +7,7 @@ import '../../services/supabase_service.dart';
 class ProjectsListController extends ChangeNotifier {
   List<ResearchGroup> _projects = [];
   bool _isLoading = true;
+  RealtimeChannel? _groupsChannel;
 
   List<ResearchGroup> get projects => _projects;
   bool get isLoading => _isLoading;
@@ -43,6 +45,7 @@ class ProjectsListController extends ChangeNotifier {
         ];
       } else {
         _projects = await SupabaseService.getGroupsBySupervisor(supervisorId);
+        _subscribeGroups(supervisorId);
       }
     } catch (e) {
       debugPrint('خطأ في تحميل المشاريع: $e');
@@ -50,5 +53,29 @@ class ProjectsListController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// تحديث القائمة بصمت عند حدوث تغيير في جدول groups
+  Future<void> refreshProjects(int supervisorId) async {
+    try {
+      _projects = await SupabaseService.getGroupsBySupervisor(supervisorId);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('خطأ في التحديث اللحظي للمشاريع: $e');
+    }
+  }
+
+  void _subscribeGroups(int supervisorId) {
+    _groupsChannel ??= SupabaseService.subscribeSupervisorGroups(
+      supervisorId,
+      () => refreshProjects(supervisorId),
+    );
+  }
+
+  @override
+  void dispose() {
+    final ch = _groupsChannel;
+    if (ch != null) SupabaseService.removeChannel(ch);
+    super.dispose();
   }
 }

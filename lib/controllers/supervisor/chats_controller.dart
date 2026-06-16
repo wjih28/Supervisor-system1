@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../services/supabase_service.dart';
 
 class ChatContact {
@@ -53,6 +54,10 @@ class ChatsController extends ChangeNotifier {
   List<ChatContact> _chats = [];
   ChatContact? _selectedChat;
   StreamSubscription<List<Map<String, dynamic>>>? _msgSub;
+  RealtimeChannel? _chatsChannel;
+
+  /// قنوات الاشتراك اللحظي لرسائل المحادثات غير المفتوحة (chatId → channel)
+  final Map<int, RealtimeChannel> _chatChannels = {};
 
   bool get isLoading => _isLoading;
   List<ChatContact> get chats => _chats;
@@ -100,14 +105,24 @@ class ChatsController extends ChangeNotifier {
         if (existing != null) {
           chatId = existing['chat_id'] as int;
           final messagesRaw = await SupabaseService.getChatMessages(chatId);
+          bool needsDelivered = false;
           messages = messagesRaw
-              .map((m) => ChatMessage(
+              .map((m) {
+                final isMe = m['sender_role'] == 'supervisor';
+                final status = m['message_status']?.toString();
+                if (!isMe && status == 'sent') needsDelivered = true;
+                return ChatMessage(
                     text: m['message_text'] ?? '',
                     time: _formatTime(m['created_at']?.toString()),
-                    isMe: m['sender_role'] == 'supervisor',
-                    status: m['message_status']?.toString(),
-                  ))
+                    isMe: isMe,
+                    status: status,
+                  );
+              })
               .toList();
+          
+          if (needsDelivered) {
+            SupabaseService.updateMessagesStatus(chatId, 'delivered');
+          }
           lastMessage = existing['last_message']?.toString() ?? '';
           time = _formatTime(existing['last_message_time']?.toString());
         }
@@ -131,6 +146,10 @@ class ChatsController extends ChangeNotifier {
       _chats = loaded;
       _selectedChat = _chats.isNotEmpty ? _chats.first : null;
       _subscribeMessages();
+      if (!isGuest) {
+        _subscribeChatsRealtime(supervisorId);
+        _subscribeNonSelectedChats();
+      }
     } catch (e) {
       debugPrint('خطأ في تحميل المحادثات: $e');
       _chats = [];
@@ -147,8 +166,12 @@ class ChatsController extends ChangeNotifier {
       _selectedChat = null;
     } else {
       _selectedChat = _chats.firstWhere((c) => c.groupId == groupId);
+      if (_selectedChat!.id != null) {
+        SupabaseService.updateMessagesStatus(_selectedChat!.id!, 'read');
+      }
     }
     _subscribeMessages();
+    _subscribeNonSelectedChats();
     notifyListeners();
   }
 
@@ -159,14 +182,23 @@ class ChatsController extends ChangeNotifier {
     final chat = _selectedChat;
     if (chat?.id == null) return;
     _msgSub = SupabaseService.getMessagesStream(chat!.id!).listen((rows) {
+      bool needsRead = false;
       chat.messages
         ..clear()
-        ..addAll(rows.map((m) => ChatMessage(
+        ..addAll(rows.map((m) {
+          final isMe = m['sender_role'] == 'supervisor';
+          final status = m['message_status']?.toString();
+          if (!isMe && status != 'read') needsRead = true;
+          return ChatMessage(
               text: m['message_text'] ?? '',
               time: _formatTime(m['created_at']?.toString()),
-              isMe: m['sender_role'] == 'supervisor',
-              status: m['message_status']?.toString(),
-            )));
+              isMe: isMe,
+              status: status,
+            );
+        }));
+      if (needsRead) {
+        SupabaseService.updateMessagesStatus(chat.id!, 'read');
+      }
       if (rows.isNotEmpty) {
         final last = rows.last;
         chat.lastMessage = last['message_text']?.toString() ?? chat.lastMessage;
@@ -174,6 +206,39 @@ class ChatsController extends ChangeNotifier {
       }
       notifyListeners();
     });
+  }
+
+  /// الاشتراك اللحظي في رسائل المحادثات غير المفتوحة لتحديث معاينة القائمة فوراً.
+  void _subscribeNonSelectedChats() {
+    for (final chat in _chats) {
+      final chatId = chat.id;
+      if (chatId == null) continue;
+      // المحادثة المفتوحة تستخدم stream — لا نضيف channel مكرر لها
+      if (chatId == _selectedChat?.id) {
+        // إذا كان لها channel قديم، نُزيله (Stream سيتولى)
+        final old = _chatChannels.remove(chatId);
+        if (old != null) SupabaseService.removeChannel(old);
+        continue;
+      }
+      // لا تُنشئ channel جديد إذا كان موجوداً بالفعل
+      if (_chatChannels.containsKey(chatId)) continue;
+
+      final channel = SupabaseService.subscribeMessagesForChat(chatId, (msg) {
+        // تحديث معاينة الرسالة الأخيرة في القائمة
+        chat.lastMessage = msg['message_text']?.toString() ?? chat.lastMessage;
+        chat.time = _formatTime(msg['created_at']?.toString());
+        // إضافة الرسالة الجديدة إلى قائمة رسائل هذه المحادثة
+        final isMe = msg['sender_role'] == 'supervisor';
+        chat.messages.add(ChatMessage(
+          text: msg['message_text'] ?? '',
+          time: _formatTime(msg['created_at']?.toString()),
+          isMe: isMe,
+          status: msg['message_status']?.toString(),
+        ));
+        notifyListeners();
+      });
+      _chatChannels[chatId] = channel;
+    }
   }
 
   /// إرسال رسالة وحفظها في قاعدة البيانات
@@ -216,9 +281,101 @@ class ChatsController extends ChangeNotifier {
     );
   }
 
+  /// تحديث قائمة المحادثات بصمت (بدون شاشة تحميل) عند وجود تغييرات في جدول chats
+  Future<void> refreshChatsList(int supervisorId) async {
+    try {
+      final groups = await SupabaseService.getGroupsBySupervisor(supervisorId);
+      final rawChats = await SupabaseService.getSupervisorChats(supervisorId);
+      final Map<int, Map<String, dynamic>> chatByGroup = {
+        for (final c in rawChats)
+          if (c['id_group'] != null) c['id_group'] as int: c
+      };
+
+      final List<ChatContact> refreshed = [];
+      for (final group in groups) {
+        final groupId = group.id;
+        if (groupId == null) continue;
+
+        final existing = chatByGroup[groupId];
+        int? chatId;
+        String lastMessage = '';
+        String time = '';
+        List<ChatMessage> messages = [];
+
+        if (existing != null) {
+          chatId = existing['chat_id'] as int;
+          // إذا كانت هذه المحادثة هي المحددة حالياً، نحتفظ برسائلها الموجودة لتفادي إعادة تحميلها وتداخل الاشتراك
+          if (_selectedChat?.id == chatId) {
+            messages = _selectedChat!.messages;
+            lastMessage = _selectedChat!.lastMessage;
+            time = _selectedChat!.time;
+          } else {
+            final messagesRaw = await SupabaseService.getChatMessages(chatId);
+            bool needsDelivered = false;
+            messages = messagesRaw
+                .map((m) {
+                  final isMe = m['sender_role'] == 'supervisor';
+                  final status = m['message_status']?.toString();
+                  if (!isMe && status == 'sent') needsDelivered = true;
+                  return ChatMessage(
+                      text: m['message_text'] ?? '',
+                      time: _formatTime(m['created_at']?.toString()),
+                      isMe: isMe,
+                      status: status,
+                    );
+                })
+                .toList();
+            if (needsDelivered) {
+              SupabaseService.updateMessagesStatus(chatId, 'delivered');
+            }
+            lastMessage = existing['last_message']?.toString() ?? '';
+            time = _formatTime(existing['last_message_time']?.toString());
+          }
+        }
+
+        final leaderName = (group.leaderName != null &&
+                group.leaderName!.trim().isNotEmpty)
+            ? group.leaderName!
+            : group.name;
+
+        refreshed.add(ChatContact(
+          id: chatId,
+          groupId: groupId,
+          name: leaderName,
+          projectName: group.name,
+          lastMessage: lastMessage,
+          time: time,
+          messages: messages,
+        ));
+      }
+
+      _chats = refreshed;
+      if (_selectedChat != null) {
+        final found = _chats.where((c) => c.groupId == _selectedChat!.groupId);
+        if (found.isNotEmpty) _selectedChat = found.first;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('خطأ في التحديث اللحظي لقائمة المحادثات: $e');
+    }
+  }
+
+  void _subscribeChatsRealtime(int supervisorId) {
+    _chatsChannel ??= SupabaseService.subscribeSupervisorChats(
+      supervisorId,
+      () => refreshChatsList(supervisorId),
+    );
+  }
+
   @override
   void dispose() {
     _msgSub?.cancel();
+    final ch = _chatsChannel;
+    if (ch != null) SupabaseService.removeChannel(ch);
+    for (final ch in _chatChannels.values) {
+      SupabaseService.removeChannel(ch);
+    }
+    _chatChannels.clear();
     super.dispose();
   }
 }
