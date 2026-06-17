@@ -15,13 +15,22 @@ class StudentGradeItem {
 /// Controller لإدارة إدخال الدرجات للطلاب
 class GradesController extends ChangeNotifier {
   final List<StudentGradeItem> _students = [];
-  final Map<int, double?> _grades = {};
+  final Map<int, double?> _stage6Grades = {};
+  final Map<int, double?> _finalEntryGrades = {};
   bool _isLoading = true;
   int? _supervisorId;
 
   List<StudentGradeItem> get students => _students;
-  Map<int, double?> get grades => _grades;
+  Map<int, double?> get stage6Grades => _stage6Grades;
+  Map<int, double?> get finalEntryGrades => _finalEntryGrades;
   bool get isLoading => _isLoading;
+
+  double? getTotalGrade(int studentId) {
+    final s6 = _stage6Grades[studentId];
+    final fin = _finalEntryGrades[studentId];
+    if (s6 == null && fin == null) return null;
+    return (s6 ?? 0.0) + (fin ?? 0.0);
+  }
 
   /// تحميل بيانات الطلاب والمشاريع والدرجات المحفوظة
   Future<void> loadStudents(
@@ -49,10 +58,23 @@ class GradesController extends ChangeNotifier {
       }
 
       // تحميل الدرجات المحفوظة من قاعدة البيانات (مفتاحها معرّف الطالب)
-      _grades.clear();
+      _stage6Grades.clear();
+      _finalEntryGrades.clear();
       if (!isGuest) {
-        final saved = await SupabaseService.getStudentGrades(supervisorId);
-        _grades.addAll(saved);
+        final saved = await SupabaseService.getStudentGradesBySupervisor(supervisorId);
+        for (var row in saved) {
+          final sId = row['id_student'] as int?;
+          if (sId != null) {
+            // Stage 6 grade is now stored in 'final_grade' column
+            if (row['final_grade'] != null) {
+              _stage6Grades[sId] = (row['final_grade'] as num).toDouble();
+            }
+            // Final Entry grade is now stored in 'supervisor_grade' column
+            if (row['supervisor_grade'] != null) {
+              _finalEntryGrades[sId] = (row['supervisor_grade'] as num).toDouble();
+            }
+          }
+        }
       }
     } catch (e) {
       debugPrint('خطأ في تحميل الطلاب: $e');
@@ -62,17 +84,17 @@ class GradesController extends ChangeNotifier {
     }
   }
 
-  /// تحديث درجة الطالب
+  /// تحديث الدرجة النهائية للطالب
   void updateGrade(int studentId, double? value) {
     if (value == null) {
-      _grades.remove(studentId);
+      _finalEntryGrades.remove(studentId);
     } else {
-      _grades[studentId] = value;
+      _finalEntryGrades[studentId] = value;
     }
     notifyListeners();
   }
 
-  /// الحصول على التقدير واللون بناءً على الدرجة
+  /// الحصول على التقدير واللون بناءً على الدرجة الكلية
   Map<String, dynamic> getRating(double? grade) {
     if (grade == null) {
       return {'text': 'لم يتم الإدخال', 'color': const Color(0xFF9CA3AF)};
@@ -93,14 +115,12 @@ class GradesController extends ChangeNotifier {
   }
 
   int get totalStudents => _students.length;
-  int get gradedStudents => _grades.values.where((g) => g != null).length;
+  int get gradedStudents => _finalEntryGrades.values.where((g) => g != null).length;
   int get ungradedStudents => totalStudents - gradedStudents;
   double get overallAverage {
     if (gradedStudents == 0) return 0.0;
-    double sum = _grades.values
-        .where((g) => g != null)
-        .fold(0.0, (prev, curr) => prev + curr!);
-    return sum / gradedStudents;
+    double sum = _students.map((e) => getTotalGrade(e.student.id!) ?? 0.0).fold(0.0, (prev, curr) => prev + curr);
+    return sum / totalStudents;
   }
 
   /// حفظ الدرجات في قاعدة البيانات (جدول student_grades)
@@ -110,19 +130,22 @@ class GradesController extends ChangeNotifier {
     final rows = <Map<String, dynamic>>[];
     for (final item in _students) {
       final studentId = item.student.id;
-      final grade = _grades[studentId];
-      if (studentId != null && grade != null) {
+      final finGrade = _finalEntryGrades[studentId];
+      if (studentId != null && finGrade != null) {
+        final s6Grade = _stage6Grades[studentId] ?? 0.0;
+        final total = s6Grade + finGrade;
         rows.add({
           'id_student': studentId,
           'id_group': item.student.groupId,
-          'grade': grade,
+          'supervisor_grade': finGrade,
+          'total_grade': total,
         });
       }
     }
 
     if (rows.isEmpty) return false;
 
-    return SupabaseService.saveStudentGrades(
+    return SupabaseService.saveStudentFinalGrades(
       supervisorId: _supervisorId!,
       grades: rows,
     );

@@ -45,6 +45,10 @@ class _StageDetailsViewState extends State<StageDetailsView> {
   // ملاحظات المرحلة 5 (ملاحظة لكل قسم — title_id)
   final Map<int, TextEditingController> _s5Notes = {};
 
+  // حقول المرحلة 6
+  DateTime? _s6Date;
+  final Map<int, TextEditingController> _s6GradesCtrls = {};
+
   // حالة عرض محلية (لم يعد هناك اعتماد فردي)
 
   @override
@@ -86,6 +90,21 @@ class _StageDetailsViewState extends State<StageDetailsView> {
       _s5Notes.putIfAbsent(sec.titleId,
           () => TextEditingController(text: sec.supervisorNote ?? ''));
     }
+    final s6 = _controller.stage6;
+    if (s6 != null) {
+      _s6Date = s6.discussDate;
+    }
+    // تهيئة حقول درجات المرحلة 6 للطلاب
+    for (var s in _controller.students) {
+      if (s.id != null) {
+        final grade = _controller.studentGrades[s.id!];
+        _s6GradesCtrls.putIfAbsent(
+          s.id!,
+          () => TextEditingController(
+              text: grade != null ? grade.toInt().toString() : ''),
+        );
+      }
+    }
   }
 
   @override
@@ -96,6 +115,9 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     _s3NoteCtrl.dispose();
     _s4NotesCtrl.dispose();
     for (final c in _s5Notes.values) {
+      c.dispose();
+    }
+    for (final c in _s6GradesCtrls.values) {
       c.dispose();
     }
     super.dispose();
@@ -237,6 +259,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
         return _buildStage4Content();
       case 5:
         return _buildStage5Content();
+      case 6:
+        return _buildStage6Content();
       default:
         return _buildUnknownStageContent();
     }
@@ -500,7 +524,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                 child: ElevatedButton.icon(
                   onPressed: _controller.isSaving
                       ? null
-                      : () => _handle(() => _controller.setStage2Approval(false),
+                      : () => _handle(
+                          () => _controller.setStage2Approval(false),
                           'تم رفض الخطة'),
                   icon: const Icon(Icons.cancel_outlined, color: Colors.white),
                   label: const Text('رفض الخطة',
@@ -1238,7 +1263,8 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     final total = sections.length;
     final approved = sections.where((s) => s.approval == true).length;
     final underReview = sections
-        .where((s) => s.approval == null && s.pdfFile != null && s.pdfFile!.isNotEmpty)
+        .where((s) =>
+            s.approval == null && s.pdfFile != null && s.pdfFile!.isNotEmpty)
         .length;
     final rejected = sections.where((s) => s.approval == false).length;
     final pct = total == 0 ? 0.0 : approved / total;
@@ -1395,6 +1421,315 @@ class _StageDetailsViewState extends State<StageDetailsView> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ===================== المرحلة 6 =====================
+  Widget _buildStage6Content() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildStage6DiscussionCard(),
+        const SizedBox(height: 24),
+        _buildStage6StudentsGradesCard(),
+        const SizedBox(height: 24),
+        _buildStage6ApprovalCard(),
+      ],
+    );
+  }
+
+  Widget _buildStage6DiscussionCard() {
+    return _buildCard(
+      title: 'تفاصيل المناقشة',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // صف: منتقي التاريخ + حالة المناقشة
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('تاريخ المناقشة',
+                        style:
+                            TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _s6Date ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _s6Date = picked;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _s6Date == null
+                                  ? 'اختر التاريخ'
+                                  : DateFormat('yyyy/MM/dd').format(_s6Date!),
+                              style: TextStyle(
+                                color: _s6Date == null
+                                    ? Colors.grey
+                                    : const Color(0xFF1F2937),
+                              ),
+                            ),
+                            const Icon(Icons.calendar_today_outlined,
+                                color: Color(0xFF9CA3AF), size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // زر حفظ التاريخ فقط
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _controller.isSaving || _s6Date == null
+                            ? null
+                            : () async {
+                                await _handle(
+                                  () => _controller.saveStage6(
+                                    date: _s6Date,
+                                    studentGrades: const {},
+                                  ),
+                                  'تم حفظ تاريخ المناقشة بنجاح',
+                                );
+                              },
+                        icon: const Icon(Icons.save_outlined, size: 18),
+                        label: const Text('حفظ التاريخ'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF3B82F6),
+                          side: const BorderSide(color: Color(0xFF3B82F6)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('حالة المناقشة',
+                        style:
+                            TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: _controller.stage6?.approval == true
+                            ? const Color(0xFFF0FDF4)
+                            : const Color(0xFFFFFBEB),
+                        border: Border.all(
+                            color: _controller.stage6?.approval == true
+                                ? const Color(0xFF86EFAC)
+                                : const Color(0xFFFDE68A)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _controller.stage6?.approval == true
+                                ? 'تم اعتماد المناقشة'
+                                : 'بانتظار الاعتماد',
+                            style: TextStyle(
+                              color: _controller.stage6?.approval == true
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFF59E0B),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Icon(
+                            _controller.stage6?.approval == true
+                                ? Icons.check_circle_outline
+                                : Icons.hourglass_empty_outlined,
+                            color: _controller.stage6?.approval == true
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFF59E0B),
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_controller.stage6?.discussDate != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.event,
+                                size: 16, color: Color(0xFF64748B)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'التاريخ المحفوظ: ${DateFormat('yyyy/MM/dd').format(_controller.stage6!.discussDate!)}',
+                              style: const TextStyle(
+                                  fontSize: 13, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStage6StudentsGradesCard() {
+    final students = _controller.students;
+    return _buildCard(
+      title: 'درجات الطلاب للمناقشة الثلاثية',
+      icon: Icons.people_outline,
+      child: students.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('لا يوجد أعضاء مسجّلون لهذه المجموعة',
+                  style: TextStyle(color: Color(0xFF6B7280))),
+            )
+          : Column(
+              children: students.map((s) {
+                final ctrl = _s6GradesCtrls[s.id];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          s.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                       Expanded(
+                        flex: 1,
+                        child: TextFormField(
+                          controller: ctrl,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'الدرجة / 40',
+                            hintText: '0 – 40',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFE5E7EB))),
+                            errorStyle:
+                                const TextStyle(fontSize: 11),
+                          ),
+                          autovalidateMode:
+                              AutovalidateMode.onUserInteraction,
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return null;
+                            final n = double.tryParse(v);
+                            if (n == null) return 'رقم غير صحيح';
+                            if (n < 0) return 'لا يمكن أن تكون سالبة';
+                            if (n > 40) return 'الحد الأقصى 40 درجة';
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+    );
+  }
+
+  Widget _buildStage6ApprovalCard() {
+    return _buildCard(
+      title: 'حفظ واعتماد',
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _controller.isSaving
+              ? null
+              : () async {
+                  // تحقق أن لا توجد درجة تتجاوز 40
+                  final invalid = _s6GradesCtrls.entries.where((e) {
+                    final v = double.tryParse(e.value.text);
+                    return v != null && v > 40;
+                  }).toList();
+
+                  if (invalid.isNotEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'بعض الدرجات تتجاوز الحد الأقصى (40 درجة). يرجى تصحيحها أولاً.'),
+                        backgroundColor: Color(0xFFDC2626),
+                      ),
+                    );
+                    return;
+                  }
+
+                  final grades = <int, double?>{};
+                  for (final entry in _s6GradesCtrls.entries) {
+                    final val = double.tryParse(entry.value.text);
+                    grades[entry.key] = val;
+                  }
+                  await _handle(
+                    () => _controller.saveStage6(
+                      approval: true,
+                      date: _s6Date,
+                      studentGrades: grades,
+                    ),
+                    'تم حفظ المرحلة السادسة بنجاح',
+                  );
+                },
+          icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+          label: const Text('اعتماد المناقشة الثلاثية وحفظ',
+              style: TextStyle(color: Colors.white, fontSize: 16)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF10B981),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         ),
       ),
     );

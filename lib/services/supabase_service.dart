@@ -398,11 +398,12 @@ class SupabaseService {
         for (final s in (statuses as List)) s['id_stages']: s,
       };
 
-      // مهمة المشرف تنتهي عند المرحلة الخامسة — تُخفى المرحلتان 6 (المناقشة الثلاثية) و7 (تسليم البحث).
+      // تُخفى المرحلة 7 (تسليم البحث) فقط — المرحلة 6 (المناقشة الثلاثية) مرئية للمشرف.
       final visibleStages = (stages as List).where((stage) {
         final n = int.tryParse(
-            RegExp(r'\d+').firstMatch('${stage['stage_name']}')?.group(0) ?? '');
-        return n == null || n <= 5;
+            RegExp(r'\d+').firstMatch('${stage['stage_name']}')?.group(0) ??
+                '');
+        return n == null || n <= 6;
       }).toList();
 
       return visibleStages.map((stage) {
@@ -774,6 +775,57 @@ class SupabaseService {
     }
   }
 
+  /// المرحلة 6 — جدول "stage 6 (trio discussion)"
+  static Future<Stage6Info?> getStage6(int groupId) async {
+    try {
+      final row = await client
+          .from('stage 6 (trio discussion)')
+          .select()
+          .eq('group_id', groupId)
+          .maybeSingle();
+      return row != null ? Stage6Info.fromJson(row) : null;
+    } catch (e) {
+      debugPrint('Error fetching stage 6: $e');
+      return null;
+    }
+  }
+
+  /// اعتماد المرحلة 6 وتحديث التاريخ
+  static Future<bool> updateStage6(
+    int groupId, {
+    bool? approval,
+    DateTime? date,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        if (approval != null) 'approval': approval,
+        if (date != null)
+          'discuss_date': date.toIso8601String().split('T').first,
+      };
+      if (data.isEmpty) return false;
+
+      final existing = await client
+          .from('stage 6 (trio discussion)')
+          .select('stage6_id')
+          .eq('group_id', groupId)
+          .maybeSingle();
+
+      if (existing == null) {
+        data['group_id'] = groupId;
+        await client.from('stage 6 (trio discussion)').insert(data);
+      } else {
+        await client
+            .from('stage 6 (trio discussion)')
+            .update(data)
+            .eq('group_id', groupId);
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error updating stage 6: $e');
+      return false;
+    }
+  }
+
   // ============ الإحصائيات ============
 
   static Future<Map<String, dynamic>?> getSupervisorStatistics(
@@ -959,18 +1011,18 @@ class SupabaseService {
 
   // ============ الدرجات (student_grades) ============
 
-  /// يعيد خريطة {معرّف الطالب: الدرجة} لهذا المشرف
-  static Future<Map<int, double>> getStudentGrades(int supervisorId) async {
+  /// يعيد خريطة {stud_id: final_grade} لكل طلاب في المجموعة (للمرحلة 6)
+  static Future<Map<int, double>> getStudentGrades(int groupId) async {
     try {
       final rows = await client
           .from('student_grades')
-          .select('id_student, grade')
-          .eq('id_sprvsr', supervisorId);
+          .select('id_student, final_grade')
+          .eq('id_group', groupId);
 
       final map = <int, double>{};
       for (final r in (rows as List)) {
-        if (r['id_student'] != null && r['grade'] != null) {
-          map[r['id_student']] = (r['grade'] as num).toDouble();
+        if (r['id_student'] != null && r['final_grade'] != null) {
+          map[r['id_student']] = (r['final_grade'] as num).toDouble();
         }
       }
       return map;
@@ -980,26 +1032,108 @@ class SupabaseService {
     }
   }
 
-  /// حفظ درجات الطلاب (upsert على id_student + id_sprvsr)
-  /// كل عنصر: {'id_student': int, 'id_group': int?, 'grade': double}
+  static Future<List<Map<String, dynamic>>> getStudentGradesBySupervisor(int supervisorId) async {
+    try {
+      final rows = await client
+          .from('student_grades')
+          .select('id_student, id_group, supervisor_grade, final_grade, total_grade')
+          .eq('id_sprvsr', supervisorId);
+      return (rows as List).map((r) => Map<String, dynamic>.from(r)).toList();
+    } catch (e) {
+      debugPrint('Error fetching student grades by supervisor: $e');
+      return [];
+    }
+  }
+
+  /// حفظ final_grade لكل طالب في جدول student_grades.
+  /// كل عنصر: {'id_student': int, 'id_group': int, 'grade': double}
   static Future<bool> saveStudentGrades({
     required int supervisorId,
     required List<Map<String, dynamic>> grades,
   }) async {
     try {
-      final rows = grades
-          .map((g) => {
-                'id_student': g['id_student'],
-                'id_group': g['id_group'],
-                'id_sprvsr': supervisorId,
-                'grade': g['grade'],
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-          .toList();
+      for (final g in grades) {
+        final studentId = g['id_student'] as int;
+        final groupId   = g['id_group']   as int;
+        final grade     = (g['grade'] as num).toDouble();
 
-      await client
-          .from('student_grades')
-          .upsert(rows, onConflict: 'id_student,id_sprvsr');
+        final existing = await client
+            .from('student_grades')
+            .select('grade_id')
+            .eq('id_student', studentId)
+            .eq('id_group', groupId)
+            .maybeSingle();
+
+        if (existing == null) {
+          await client.from('student_grades').insert({
+            'id_student':       studentId,
+            'id_group':         groupId,
+            'id_sprvsr':        supervisorId,
+            'final_grade':      grade,
+            'updated_at':       DateTime.now().toIso8601String(),
+          });
+        } else {
+          await client
+              .from('student_grades')
+              .update({
+                'final_grade':      grade,
+                'id_sprvsr':        supervisorId,
+                'updated_at':       DateTime.now().toIso8601String(),
+              })
+              .eq('grade_id', existing['grade_id']);
+        }
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error saving student grades: $e');
+      return false;
+    }
+  }
+
+  /// حفظ supervisor_grade لكل طالب في جدول student_grades.
+  /// كل عنصر: {'id_student': int, 'id_group': int, 'supervisor_grade': double, 'total_grade': double}
+  static Future<bool> saveStudentFinalGrades({
+    required int supervisorId,
+    required List<Map<String, dynamic>> grades,
+  }) async {
+    try {
+      for (final g in grades) {
+        final studentId = g['id_student'] as int;
+        final groupId   = g['id_group']   as int;
+        final supGrade  = (g['supervisor_grade'] as num).toDouble();
+        final totalGrade = (g['total_grade'] as num).toDouble();
+
+        // ابحث عن صف موجود لهذا الطالب في هذه المجموعة
+        final existing = await client
+            .from('student_grades')
+            .select('grade_id')
+            .eq('id_student', studentId)
+            .eq('id_group', groupId)
+            .maybeSingle();
+
+        if (existing == null) {
+          // إنشاء صف جديد
+          await client.from('student_grades').insert({
+            'id_student':       studentId,
+            'id_group':         groupId,
+            'id_sprvsr':        supervisorId,
+            'supervisor_grade': supGrade,
+            'total_grade':      totalGrade,
+            'updated_at':       DateTime.now().toIso8601String(),
+          });
+        } else {
+          // تحديث الصف الموجود
+          await client
+              .from('student_grades')
+              .update({
+                'supervisor_grade': supGrade,
+                'total_grade':      totalGrade,
+                'id_sprvsr':        supervisorId,
+                'updated_at':       DateTime.now().toIso8601String(),
+              })
+              .eq('grade_id', existing['grade_id']);
+        }
+      }
       return true;
     } catch (e) {
       debugPrint('Error saving student grades: $e');
@@ -1073,8 +1207,7 @@ class SupabaseService {
     }
   }
 
-  static Future<bool> sendMessage(
-      int chatId, String text, String senderRole,
+  static Future<bool> sendMessage(int chatId, String text, String senderRole,
       {int? senderId}) async {
     try {
       await client.from('messages').insert({

@@ -30,6 +30,7 @@ class StageDetailsController extends ChangeNotifier {
   Stage3Info? _stage3;
   Stage4Info? _stage4;
   List<Stage5Section> _stage5Sections = [];
+  Stage6Info? _stage6;
 
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
@@ -43,6 +44,10 @@ class StageDetailsController extends ChangeNotifier {
   Stage3Info? get stage3 => _stage3;
   Stage4Info? get stage4 => _stage4;
   List<Stage5Section> get stage5Sections => _stage5Sections;
+  Stage6Info? get stage6 => _stage6;
+
+  final Map<int, double?> _studentGrades = {};
+  Map<int, double?> get studentGrades => _studentGrades;
 
   RealtimeChannel? _channel;
 
@@ -54,6 +59,10 @@ class StageDetailsController extends ChangeNotifier {
     try {
       _group = await SupabaseService.getProjectById(groupId);
       _students = await SupabaseService.getGroupStudents(groupId);
+      // جلب الدرجات الحالية لطلاب هذه المجموعة
+      final allGrades = await SupabaseService.getStudentGrades(groupId);
+      _studentGrades.clear();
+      _studentGrades.addAll(allGrades);
       await _fetchStageData();
     } catch (e) {
       _error = e.toString();
@@ -82,6 +91,9 @@ class StageDetailsController extends ChangeNotifier {
         break;
       case 5:
         _stage5Sections = await SupabaseService.getStage5Sections(groupId);
+        break;
+      case 6:
+        _stage6 = await SupabaseService.getStage6(groupId);
         break;
     }
   }
@@ -183,8 +195,43 @@ class StageDetailsController extends ChangeNotifier {
       _run(() async {
         final ok = await SupabaseService.updateStage5Section(groupId, titleId,
             approved: approved, note: note);
-        if (ok)
+        if (ok) {
           _stage5Sections = await SupabaseService.getStage5Sections(groupId);
+        }
         return ok;
+      });
+
+  // ---- المرحلة 6 ----
+  Future<bool> saveStage6({
+    bool? approval,
+    DateTime? date,
+    required Map<int, double?> studentGrades,
+  }) =>
+      _run(() async {
+        final okStage = await SupabaseService.updateStage6(groupId,
+            approval: approval, date: date);
+
+        // حفظ الدرجات للطلاب
+        if (studentGrades.isNotEmpty) {
+          final gradesList = <Map<String, dynamic>>[];
+          studentGrades.forEach((studentId, grade) {
+            if (grade != null) {
+              gradesList.add({
+                'id_student': studentId,
+                'id_group': groupId,
+                'grade': grade,
+              });
+            }
+          });
+          if (gradesList.isNotEmpty) {
+            await SupabaseService.saveStudentGrades(
+              supervisorId: supervisorId,
+              grades: gradesList,
+            );
+          }
+        }
+
+        if (okStage) _stage6 = await SupabaseService.getStage6(groupId);
+        return okStage;
       });
 }

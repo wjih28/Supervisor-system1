@@ -280,8 +280,9 @@ class _GradesEntryViewState extends State<GradesEntryView> {
             Divider(height: 1, color: Colors.grey.shade100),
         itemBuilder: (context, index) {
           final item = _controller.students[index];
-          final grade = _controller.grades[item.student.id];
-          final rating = _controller.getRating(grade);
+          final grade = _controller.finalEntryGrades[item.student.id];
+          final total = _controller.getTotalGrade(item.student.id!);
+          final rating = _controller.getRating(total);
 
           return Padding(
             padding: const EdgeInsets.all(16),
@@ -348,7 +349,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                 // Row 3: grade input + rating
                 Row(
                   children: [
-                    const Text('الدرجة: ',
+                    const Text('الدرجة النهائية: ',
                         style:
                             TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
                     SizedBox(
@@ -359,7 +360,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
                         decoration: InputDecoration(
-                          hintText: '0-100',
+                          hintText: '0-60',
                           hintStyle: TextStyle(
                               color: Colors.grey.shade400, fontSize: 12),
                           contentPadding: const EdgeInsets.symmetric(
@@ -375,13 +376,21 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                           final numValue = double.tryParse(value);
                           if (numValue != null &&
                               numValue >= 0 &&
-                              numValue <= 100) {
+                              numValue <= 60) {
                             _controller.updateGrade(item.student.id!, numValue);
                           } else if (value.isEmpty) {
                             _controller.updateGrade(item.student.id!, null);
                           }
                         },
                       ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text('المجموع: ',
+                        style:
+                            TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                    Text(
+                      total != null ? total.toInt().toString() : '-',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(width: 16),
                     const Text('التقدير: ',
@@ -445,7 +454,17 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                             fontWeight: FontWeight.bold, color: Colors.grey))),
                 Expanded(
                     flex: 1,
-                    child: Text('الدرجة (من 100)',
+                    child: Text('المشرف (40)',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                Expanded(
+                    flex: 1,
+                    child: Text('النهائية (60)',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                Expanded(
+                    flex: 1,
+                    child: Text('المجموع (100)',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, color: Colors.grey))),
                 Expanded(
@@ -465,8 +484,10 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                 Divider(height: 1, color: Colors.grey.shade100),
             itemBuilder: (context, index) {
               final item = _controller.students[index];
-              final grade = _controller.grades[item.student.id];
-              final rating = _controller.getRating(grade);
+              final grade = _controller.finalEntryGrades[item.student.id];
+              final supGrade = _controller.stage6Grades[item.student.id];
+              final total = _controller.getTotalGrade(item.student.id!);
+              final rating = _controller.getRating(total);
 
               return Padding(
                 padding:
@@ -515,15 +536,24 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                     ),
                     Expanded(
                       flex: 1,
+                      child: Center(
+                        child: Text(
+                          supGrade != null ? supGrade.toInt().toString() : '-',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6B7280)),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
                       child: Container(
-                        padding: const EdgeInsets.only(left: 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: TextFormField(
                           initialValue:
                               grade != null ? grade.toInt().toString() : '',
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
                           decoration: InputDecoration(
-                            hintText: 'أدخل الدرجة',
+                            hintText: '0-60',
                             hintStyle: TextStyle(
                                 color: Colors.grey.shade400, fontSize: 12),
                             contentPadding: const EdgeInsets.symmetric(
@@ -539,13 +569,22 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                             final numValue = double.tryParse(value);
                             if (numValue != null &&
                                 numValue >= 0 &&
-                                numValue <= 100) {
+                                numValue <= 60) {
                               _controller.updateGrade(
                                   item.student.id!, numValue);
                             } else if (value.isEmpty) {
                               _controller.updateGrade(item.student.id!, null);
                             }
                           },
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Center(
+                        child: Text(
+                          total != null ? total.toInt().toString() : '-',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                       ),
                     ),

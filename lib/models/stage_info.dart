@@ -140,3 +140,29 @@ class Stage5Section {
     );
   }
 }
+
+/// المرحلة السادسة — جدول "stage 6 (trio discussion)"
+class Stage6Info {
+  final int? id;
+  final DateTime? discussDate;
+  final bool? approval;
+  final String? pdfFile;
+
+  Stage6Info({
+    this.id,
+    this.discussDate,
+    this.approval,
+    this.pdfFile,
+  });
+
+  factory Stage6Info.fromJson(Map<String, dynamic> json) {
+    return Stage6Info(
+      id: json["stage6_id"],
+      discussDate: json["discuss_date"] != null
+          ? DateTime.tryParse(json["discuss_date"].toString())
+          : null,
+      approval: json["approval"],
+      pdfFile: json["pdf_file"],
+    );
+  }
+}
