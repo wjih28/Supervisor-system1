@@ -9,8 +9,8 @@ void main() async {
   
   final res = await client.from('supervisor').select().limit(1);
   if (res.isNotEmpty) {
-    print(res.first.keys.toList());
+    print(res.first.keys.toList()); // ignore: avoid_print
   } else {
-    print('No rows found');
+    print('No rows found'); // ignore: avoid_print
   }
 }

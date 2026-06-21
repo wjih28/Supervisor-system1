@@ -24,7 +24,7 @@ void main() async {
       .maybeSingle();
   
   if (existing != null) {
-    print('Existing row: $existing');
+    print('Existing row: $existing'); // ignore: avoid_print
     final gradeId = existing['grade_id'];
 
     // تحديث final_grade
@@ -38,9 +38,9 @@ void main() async {
         .select('grade_id, final_grade')
         .eq('grade_id', gradeId)
         .single();
-    print('After update: $updated');
+    print('After update: $updated'); // ignore: avoid_print
   } else {
-    print('No rows found — testing INSERT...');
+    print('No rows found — testing INSERT...'); // ignore: avoid_print
     final stud = await client.from('student').select('stud_id, id_group').limit(1).single();
     await client.from('student_grades').insert({
       'id_student': stud['stud_id'],
@@ -48,7 +48,7 @@ void main() async {
       'final_grade': 88,
       'updated_at': DateTime.now().toIso8601String(),
     });
-    print('INSERT success!');
+    print('INSERT success!'); // ignore: avoid_print
   }
 
   exit(0);

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../services/supabase_service.dart';
 
-/// Controller لإدارة الإشعارات
 class NotificationsController extends ChangeNotifier {
   List<AppNotification> _notifications = [];
   bool _isLoading = true;

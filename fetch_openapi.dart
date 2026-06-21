@@ -19,6 +19,6 @@ void main() async {
   final response = await request.close();
   final body = await response.transform(utf8.decoder).join();
   File('openapi.json').writeAsStringSync(body);
-  print('Saved OpenAPI spec.');
+  print('Saved OpenAPI spec.'); // ignore: avoid_print
   exit(0);
 }
