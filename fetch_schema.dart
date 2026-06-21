@@ -18,9 +18,9 @@ void main() async {
   
   try {
     await client.from('sprvsr_grades').delete().eq('grade_id', 4);
-    print('Deleted row.');
+    print('Deleted row.'); // ignore: avoid_print
   } catch (e) {
-    print('error: $e');
+    print('error: $e'); // ignore: avoid_print
   }
   
   exit(0);
