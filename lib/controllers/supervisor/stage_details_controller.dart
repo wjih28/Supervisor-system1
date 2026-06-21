@@ -163,8 +163,8 @@ class StageDetailsController extends ChangeNotifier {
 
   // ---- المرحلة 3 ----
   Future<bool> saveStage3({
-    required bool discussed,
-    required double percent,
+    bool? discussed,
+    double? percent,
     DateTime? date,
     String? note,
   }) =>

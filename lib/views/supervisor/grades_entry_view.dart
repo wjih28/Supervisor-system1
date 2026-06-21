@@ -252,6 +252,17 @@ class _GradesEntryViewState extends State<GradesEntryView> {
     );
   }
 
+  Map<String, List<StudentGradeItem>> _getGroupedStudents() {
+    final Map<String, List<StudentGradeItem>> grouped = {};
+    for (var item in _controller.students) {
+      if (!grouped.containsKey(item.projectName)) {
+        grouped[item.projectName] = [];
+      }
+      grouped[item.projectName]!.add(item);
+    }
+    return grouped;
+  }
+
   Widget _buildStudentsTable() {
     if (_controller.students.isEmpty) {
       return const Center(child: Text('لا يوجد طلاب مضافين للمشاريع'));
@@ -266,346 +277,403 @@ class _GradesEntryViewState extends State<GradesEntryView> {
 
   // --- Mobile: Card-based list instead of table ---
   Widget _buildMobileStudentsList() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _controller.students.length,
-        separatorBuilder: (context, index) =>
-            Divider(height: 1, color: Colors.grey.shade100),
-        itemBuilder: (context, index) {
-          final item = _controller.students[index];
-          final grade = _controller.finalEntryGrades[item.student.id];
-          final total = _controller.getTotalGrade(item.student.id!);
-          final rating = _controller.getRating(total);
+    final groupedStudents = _getGroupedStudents();
 
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Row 1: # and student name
-                Row(
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${index + 1}',
-                        style: const TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        item.student.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (item.student.role == 'قائد الفريق')
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2D62ED),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          item.student.role!,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 10),
-                        ),
-                      ),
-                  ],
+    return Column(
+      children: groupedStudents.entries.map((entry) {
+        final projectName = entry.key;
+        final students = entry.value;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Project Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
                 ),
-                const SizedBox(height: 8),
-                // Row 2: project name
-                Text(
-                  item.projectName,
-                  style:
-                      const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+                child: Text(
+                  projectName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                // Row 3: grade input + rating
-                Row(
-                  children: [
-                    const Text('الدرجة النهائية: ',
-                        style:
-                            TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
-                    SizedBox(
-                      width: 100,
-                      child: TextFormField(
-                        initialValue:
-                            grade != null ? grade.toInt().toString() : '',
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          hintText: '0-60',
-                          hintStyle: TextStyle(
-                              color: Colors.grey.shade400, fontSize: 12),
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 8),
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none,
-                          ),
+              ),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: students.length,
+                separatorBuilder: (context, index) =>
+                    Divider(height: 1, color: Colors.grey.shade100),
+                itemBuilder: (context, index) {
+                  final item = students[index];
+                  final grade = _controller.finalEntryGrades[item.student.id];
+                  final total = _controller.getTotalGrade(item.student.id!);
+                  final rating = _controller.getRating(total);
+
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Row 1: # and student name
+                        Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${index + 1}',
+                                style: const TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                item.student.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (item.student.role == 'قائد الفريق')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2D62ED),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  item.student.role!,
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 10),
+                                ),
+                              ),
+                          ],
                         ),
-                        onChanged: (value) {
-                          final numValue = double.tryParse(value);
-                          if (numValue != null &&
-                              numValue >= 0 &&
-                              numValue <= 60) {
-                            _controller.updateGrade(item.student.id!, numValue);
-                          } else if (value.isEmpty) {
-                            _controller.updateGrade(item.student.id!, null);
-                          }
-                        },
-                      ),
+                        const SizedBox(height: 12),
+                        // Row 3: grade input + rating
+                        Row(
+                          children: [
+                            const Text('الدرجة النهائية: ',
+                                style: TextStyle(
+                                    color: Color(0xFF6B7280), fontSize: 13)),
+                            SizedBox(
+                              width: 100,
+                              child: TextFormField(
+                                initialValue:
+                                    grade != null ? grade.toInt().toString() : '',
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                decoration: InputDecoration(
+                                  hintText: '0-60',
+                                  hintStyle: TextStyle(
+                                      color: Colors.grey.shade400, fontSize: 12),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 8, horizontal: 8),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                onChanged: (value) {
+                                  final numValue = double.tryParse(value);
+                                  if (numValue != null &&
+                                      numValue >= 0 &&
+                                      numValue <= 60) {
+                                    _controller.updateGrade(
+                                        item.student.id!, numValue);
+                                  } else if (value.isEmpty) {
+                                    _controller.updateGrade(
+                                        item.student.id!, null);
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Text('المجموع: ',
+                                style: TextStyle(
+                                    color: Color(0xFF6B7280), fontSize: 13)),
+                            Text(
+                              total != null ? total.toInt().toString() : '-',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 16),
+                            const Text('التقدير: ',
+                                style: TextStyle(
+                                    color: Color(0xFF6B7280), fontSize: 13)),
+                            Text(
+                              rating['text'],
+                              style: TextStyle(
+                                  color: rating['color'],
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    const Text('المجموع: ',
-                        style:
-                            TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
-                    Text(
-                      total != null ? total.toInt().toString() : '-',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(width: 16),
-                    const Text('التقدير: ',
-                        style:
-                            TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
-                    Text(
-                      rating['text'],
-                      style: TextStyle(
-                          color: rating['color'], fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
   // --- Desktop: Traditional table ---
   Widget _buildDesktopTable() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          // Table Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: const Row(
-              children: [
-                SizedBox(
-                    width: 40,
-                    child: Text('#',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(
-                    flex: 2,
-                    child: Text('اسم الطالب',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(
-                    flex: 3,
-                    child: Text('عنوان البحث',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(
-                    flex: 1,
-                    child: Text('الدور',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(
-                    flex: 1,
-                    child: Text('المشرف (40)',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(
-                    flex: 1,
-                    child: Text('النهائية (60)',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(
-                    flex: 1,
-                    child: Text('المجموع (100)',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(
-                    flex: 1,
-                    child: Text('التقدير',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.grey))),
-              ],
-            ),
-          ),
-          // Table Rows
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _controller.students.length,
-            separatorBuilder: (context, index) =>
-                Divider(height: 1, color: Colors.grey.shade100),
-            itemBuilder: (context, index) {
-              final item = _controller.students[index];
-              final grade = _controller.finalEntryGrades[item.student.id];
-              final supGrade = _controller.stage6Grades[item.student.id];
-              final total = _controller.getTotalGrade(item.student.id!);
-              final rating = _controller.getRating(total);
+    final groupedStudents = _getGroupedStudents();
 
-              return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
+    return Column(
+      children: groupedStudents.entries.map((entry) {
+        final projectName = entry.key;
+        final students = entry.value;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Project Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: Text(
+                  projectName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              // Table Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: const Row(
                   children: [
                     SizedBox(
                         width: 40,
-                        child: Text('${index + 1}',
-                            style: const TextStyle(color: Colors.grey))),
+                        child: Text('#',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey))),
                     Expanded(
-                      flex: 2,
-                      child: Text(
-                        item.student.name,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                        flex: 3,
+                        child: Text('اسم الطالب',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey))),
                     Expanded(
-                      flex: 3,
-                      child: Text(
-                        item.projectName,
-                        style: const TextStyle(color: Colors.grey),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                        flex: 1,
+                        child: Text('الدور',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey))),
                     Expanded(
-                      flex: 1,
-                      child: item.student.role == 'قائد الفريق'
-                          ? Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF2D62ED),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                item.student.role!,
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 10),
-                                textAlign: TextAlign.center,
-                              ),
-                            )
-                          : Text(item.student.role ?? 'عضو',
-                              style: const TextStyle(color: Colors.grey)),
-                    ),
+                        flex: 1,
+                        child: Text('المشرف (40)',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey))),
                     Expanded(
-                      flex: 1,
-                      child: Center(
-                        child: Text(
-                          supGrade != null ? supGrade.toInt().toString() : '-',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6B7280)),
-                        ),
-                      ),
-                    ),
+                        flex: 1,
+                        child: Text('النهائية (60)',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey))),
                     Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: TextFormField(
-                          initialValue:
-                              grade != null ? grade.toInt().toString() : '',
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          decoration: InputDecoration(
-                            hintText: '0-60',
-                            hintStyle: TextStyle(
-                                color: Colors.grey.shade400, fontSize: 12),
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 8),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          onChanged: (value) {
-                            final numValue = double.tryParse(value);
-                            if (numValue != null &&
-                                numValue >= 0 &&
-                                numValue <= 60) {
-                              _controller.updateGrade(
-                                  item.student.id!, numValue);
-                            } else if (value.isEmpty) {
-                              _controller.updateGrade(item.student.id!, null);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
+                        flex: 1,
+                        child: Text('المجموع (100)',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey))),
                     Expanded(
-                      flex: 1,
-                      child: Center(
-                        child: Text(
-                          total != null ? total.toInt().toString() : '-',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: Center(
-                        child: Text(
-                          rating['text'],
-                          style: TextStyle(
-                              color: rating['color'],
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
+                        flex: 1,
+                        child: Text('التقدير',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey))),
                   ],
                 ),
-              );
-            },
+              ),
+              // Table Rows
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: students.length,
+                separatorBuilder: (context, index) =>
+                    Divider(height: 1, color: Colors.grey.shade100),
+                itemBuilder: (context, index) {
+                  final item = students[index];
+                  final grade = _controller.finalEntryGrades[item.student.id];
+                  final supGrade = _controller.stage6Grades[item.student.id];
+                  final total = _controller.getTotalGrade(item.student.id!);
+                  final rating = _controller.getRating(total);
+
+                  return Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                            width: 40,
+                            child: Text('${index + 1}',
+                                style: const TextStyle(color: Colors.grey))),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            item.student.name,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: item.student.role == 'قائد الفريق'
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2D62ED),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    item.student.role!,
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 10),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                )
+                              : Text(item.student.role ?? 'عضو',
+                                  style: const TextStyle(color: Colors.grey)),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Center(
+                            child: Text(
+                              supGrade != null
+                                  ? supGrade.toInt().toString()
+                                  : '-',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF6B7280)),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: TextFormField(
+                              initialValue:
+                                  grade != null ? grade.toInt().toString() : '',
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              decoration: InputDecoration(
+                                hintText: '0-60',
+                                hintStyle: TextStyle(
+                                    color: Colors.grey.shade400, fontSize: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 8),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              onChanged: (value) {
+                                final numValue = double.tryParse(value);
+                                if (numValue != null &&
+                                    numValue >= 0 &&
+                                    numValue <= 60) {
+                                  _controller.updateGrade(
+                                      item.student.id!, numValue);
+                                } else if (value.isEmpty) {
+                                  _controller.updateGrade(
+                                      item.student.id!, null);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Center(
+                            child: Text(
+                              total != null ? total.toInt().toString() : '-',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Center(
+                            child: Text(
+                              rating['text'],
+                              style: TextStyle(
+                                  color: rating['color'],
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 

@@ -851,6 +851,31 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                                 const BorderSide(color: Color(0xFFE5E7EB))),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _controller.isSaving || _s3Date == null
+                            ? null
+                            : () async {
+                                await _handle(
+                                  () => _controller.saveStage3(
+                                    date: _s3Date,
+                                  ),
+                                  'تم حفظ تاريخ المناقشة بنجاح',
+                                );
+                              },
+                        icon: const Icon(Icons.save_outlined, size: 18),
+                        label: const Text('حفظ التاريخ'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF3B82F6),
+                          side: const BorderSide(color: Color(0xFF3B82F6)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1194,7 +1219,7 @@ class _StageDetailsViewState extends State<StageDetailsView> {
             controller: noteCtrl,
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: 'أدخل ملاحظتك على هذا القسم',
+              hintText: 'أدخل ملاحظتك على هذا الفصل',
               filled: true,
               fillColor: const Color(0xFFF3F4F6),
               border: OutlineInputBorder(
@@ -1230,7 +1255,7 @@ class _StageDetailsViewState extends State<StageDetailsView> {
                       : () => _saveStage5Section(s, true),
                   icon: const Icon(Icons.check_circle_outline,
                       color: Colors.white),
-                  label: const Text('اعتماد القسم',
+                  label: const Text('اعتماد الفصل',
                       style: TextStyle(color: Colors.white, fontSize: 16)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
@@ -1253,7 +1278,7 @@ class _StageDetailsViewState extends State<StageDetailsView> {
     _handle(
       () => _controller.saveStage5Section(s.titleId,
           approved: approved, note: note),
-      approved ? 'تم اعتماد القسم' : 'تم إرسال طلب التعديل',
+      approved ? 'تم اعتماد الفصل' : 'تم إرسال طلب التعديل',
     );
   }
 

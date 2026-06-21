@@ -634,20 +634,21 @@ class SupabaseService {
   /// حفظ نتيجة مناقشة الخطة (المرحلة 3). تُنشئ الصف إن لم يكن موجوداً.
   static Future<bool> updateStage3(
     int groupId, {
-    required bool discussed,
-    required double percent,
+    bool? discussed,
+    double? percent,
     DateTime? date,
     String? note,
   }) async {
     try {
       final data = <String, dynamic>{
-        'discussion_state': discussed,
-        'discussion_percent': percent,
+        if (discussed != null) 'discussion_state': discussed,
+        if (percent != null) 'discussion_percent': percent,
         if (date != null)
           'discus_date':
               date.toIso8601String().split('T').first, // صيغة DATE: yyyy-MM-dd
         if (note != null) 'sprvsr_note': note,
       };
+      if (data.isEmpty) return false;
       final existing = await client
           .from('third stage(discussion)')
           .select('stage3_id')

@@ -146,10 +146,7 @@ class _SettingsViewState extends State<SettingsView> {
                     _buildSectionHeader(Icons.lock_outline, 'الأمان'),
                     const SizedBox(height: 24),
                     _buildSecuritySection(),
-                    const SizedBox(height: 32),
-                    _buildSectionHeader(Icons.language, 'اللغة والمظهر'),
-                    const SizedBox(height: 24),
-                    _buildAppearanceSection(),
+
                     const SizedBox(height: 32),
                     _buildSectionHeader(Icons.info_outline, 'معلومات النظام'),
                     const SizedBox(height: 24),
@@ -397,8 +394,7 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           const SizedBox(height: 20),
           _buildResponsiveRow(
-            _buildTextField('الرقم الوظيفي', _employeeIdController,
-                enabled: false),
+            const SizedBox.shrink(),
             _buildTextField('البرنامج', _programController, enabled: false),
             isDesktop,
           ),
@@ -486,39 +482,7 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildAppearanceSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10)
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildDropdownField('اللغة', ['العربية', 'English'],
-              _controller.settings?.language ?? 'العربية', (val) {
-            if (val != null) {
-              setState(() => _controller.updateSettings(
-                  _controller.settings?.copyWith(language: val)));
-            }
-          }),
-          const SizedBox(height: 24),
-          _buildDropdownField(
-              'المنطقة الزمنية',
-              ['توقيت عدن (GMT+3)', 'توقيت مكة (GMT+3)', 'توقيت دبي (GMT+4)'],
-              _controller.settings?.timezone ?? 'توقيت عدن (GMT+3)', (val) {
-            if (val != null) {
-              setState(() => _controller.updateSettings(
-                  _controller.settings?.copyWith(timezone: val)));
-            }
-          }),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildSystemInfoSection(bool isDesktop) {
     return Container(
