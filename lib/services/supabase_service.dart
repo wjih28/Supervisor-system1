@@ -84,19 +84,8 @@ class SupabaseService {
     }
   }
 
-  static Future<bool> updateGroupStatus(
-      int groupId, String status, double progress) async {
-    try {
-      await client.from('groups').update({
-        // الواجهة تستخدم مقياس (0 - 100) والعمود يخزّن كسراً (0.0 - 1.0)
-        'group_progress': progress / 100,
-      }).eq('group_id', groupId);
-      return true;
-    } catch (e) {
-      debugPrint('Error updating group status: $e');
-      return false;
-    }
-  }
+  // ملاحظة: group_progress أصبح يُحسب تلقائياً عبر trigger في قاعدة البيانات
+  // (calc_group_progress) اعتماداً على المراحل المعتمدة، فلا تُكتب يدوياً من التطبيق.
 
   /// تحديث المرحلة الحالية للمجموعة (current_stage هو مفتاح خارجي إلى stages)
   static Future<bool> updateProjectStage(int projectId, int stageId) async {
